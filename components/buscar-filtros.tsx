@@ -33,66 +33,69 @@ export function BuscarFiltros({
   const comunaSeleccionada = COMUNAS.find((c) => c.id === comuna);
 
   return (
-    <form action={action} className="mt-5 flex flex-wrap items-end gap-3">
+    <form action={action} className="mt-5 flex flex-col gap-4">
       <div className="flex flex-wrap gap-2">
         {DEPORTES.map((d) => (
           <label key={d.value}>
             <input type="radio" name="deporte" value={d.value} defaultChecked={deporte === d.value} className="peer hidden" />
-            <span className="cursor-pointer rounded-full border border-ink-200 px-4 py-2 text-sm font-medium text-ink-700 transition-colors hover:border-brand-400 peer-checked:border-brand-600 peer-checked:bg-brand-600 peer-checked:text-white">
+            <span className="block cursor-pointer rounded-full border border-ink-200 px-4 py-2 text-sm font-medium text-ink-700 transition-colors hover:border-brand-400 peer-checked:border-brand-600 peer-checked:bg-brand-600 peer-checked:text-white">
               {d.label}
             </span>
           </label>
         ))}
       </div>
 
-      <div>
-        <label className="text-xs font-medium text-ink-500">Comuna</label>
-        <select
-          name="comuna_id"
-          className="input mt-0.5 w-auto"
-          value={comuna}
-          onChange={(e) => setComuna(e.target.value)}
-        >
-          <option value="">Todas</option>
-          {COMUNAS.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.nombre}
-            </option>
-          ))}
-        </select>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:flex lg:flex-wrap lg:items-end lg:gap-4">
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-ink-500">Comuna</label>
+          <select
+            name="comuna_id"
+            className="input w-full lg:w-auto"
+            value={comuna}
+            onChange={(e) => setComuna(e.target.value)}
+          >
+            <option value="">Todas</option>
+            {COMUNAS.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nombre}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-ink-500">Barrio</label>
+          <select name="barrio" className="input w-full lg:w-auto" defaultValue={barrio} disabled={!comunaSeleccionada}>
+            <option value="">{comunaSeleccionada ? "Todos" : "Elige comuna"}</option>
+            {comunaSeleccionada?.barrios.map((b) => (
+              <option key={b} value={b}>
+                {b}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-ink-500">Punto cardinal</label>
+          <select name="cardinal" className="input w-full lg:w-auto" defaultValue={cardinal}>
+            <option value="">Todos</option>
+            {PUNTOS_CARDINALES.map((p) => (
+              <option key={p.value} value={p.value}>
+                {p.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
-      <div>
-        <label className="text-xs font-medium text-ink-500">Barrio</label>
-        <select name="barrio" className="input mt-0.5 w-auto" defaultValue={barrio} disabled={!comunaSeleccionada}>
-          <option value="">{comunaSeleccionada ? "Todos" : "Elige comuna"}</option>
-          {comunaSeleccionada?.barrios.map((b) => (
-            <option key={b} value={b}>
-              {b}
-            </option>
-          ))}
-        </select>
+      <div className="flex flex-wrap gap-2">
+        <button className="btn-primary">Buscar</button>
+        {otroDestino && (
+          <a href={otroDestino.href} className="btn-secondary">
+            {otroDestino.label}
+          </a>
+        )}
       </div>
-
-      <div>
-        <label className="text-xs font-medium text-ink-500">Punto cardinal</label>
-        <select name="cardinal" className="input mt-0.5 w-auto" defaultValue={cardinal}>
-          <option value="">Todos</option>
-          {PUNTOS_CARDINALES.map((p) => (
-            <option key={p.value} value={p.value}>
-              {p.label}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <button className="btn-primary">Buscar</button>
-
-      {otroDestino && (
-        <a href={otroDestino.href} className="btn-secondary">
-          {otroDestino.label}
-        </a>
-      )}
     </form>
   );
 }

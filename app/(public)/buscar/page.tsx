@@ -16,9 +16,10 @@ export default async function BuscarPage({
   let query = supabase
     .from("courts")
     .select(
-      "id, name, sport, price_per_hour, court_photos(url), venues!inner(name, neighborhood, city, comuna, lat, lng)"
+      "id, name, sport, size, is_covered, price_per_hour, court_photos(url), venues!inner(name, neighborhood, city, comuna, lat, lng)"
     )
-    .eq("is_active", true);
+    .eq("is_active", true)
+    .eq("is_approved", true);
 
   if (deporte) query = query.eq("sport", deporte);
   if (comuna) query = query.eq("venues.comuna", comuna.nombre);

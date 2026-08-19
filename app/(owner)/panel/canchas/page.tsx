@@ -13,7 +13,7 @@ export default async function MisCanchasPage() {
 
   const { data: courts } = await supabase
     .from("courts")
-    .select("id, name, sport, price_per_hour, is_active")
+    .select("id, name, sport, size, is_covered, price_per_hour, is_active, is_approved")
     .in("venue_id", venueIds.length ? venueIds : ["00000000-0000-0000-0000-000000000000"])
     .order("created_at", { ascending: false });
 
@@ -30,9 +30,13 @@ export default async function MisCanchasPage() {
 
       <div className="mt-5 space-y-3">
         {courts?.map((c) => (
-          <div key={c.id} className="card flex items-center justify-between p-4">
+          <div key={c.id} className="card flex flex-wrap items-center justify-between gap-3 p-4">
             <div>
-              <p className="badge bg-brand-50 text-brand-700">{SPORT_LABEL[c.sport] ?? c.sport}</p>
+              <div className="flex flex-wrap gap-1.5">
+                <p className="badge bg-brand-50 text-brand-700">{SPORT_LABEL[c.sport] ?? c.sport}</p>
+                {c.size && <p className="badge bg-ink-100 text-ink-600">{c.size}</p>}
+                {c.is_covered && <p className="badge bg-sky-50 text-sky-700">☂️ Techada</p>}
+              </div>
               <p className="mt-1 font-semibold text-ink-900">{c.name}</p>
               <p className="text-sm text-ink-500">
                 ${c.price_per_hour.toLocaleString("es-CO")}/hora ·{" "}
@@ -42,8 +46,16 @@ export default async function MisCanchasPage() {
                   <span className="text-ink-400">inactiva</span>
                 )}
               </p>
+              {!c.is_approved && (
+                <p className="mt-1 badge bg-amber-50 text-amber-700">
+                  ⏳ Pendiente de revisión por un admin
+                </p>
+              )}
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap justify-end gap-2">
+              <Link href={`/panel/canchas/${c.id}/editar`} className="btn-secondary !py-2 text-sm">
+                Editar
+              </Link>
               <Link href={`/panel/canchas/${c.id}/fotos`} className="btn-secondary !py-2 text-sm">
                 Fotos
               </Link>

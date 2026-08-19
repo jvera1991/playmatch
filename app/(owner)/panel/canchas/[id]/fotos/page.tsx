@@ -16,7 +16,7 @@ export default async function FotosCanchaPage({ params }: { params: Promise<{ id
   // vacía confusa).
   const { data: court } = await supabase
     .from("courts")
-    .select("id, name, venues!inner(owner_id)")
+    .select("id, name, is_approved, venues!inner(owner_id)")
     .eq("id", courtId)
     .single();
 
@@ -66,6 +66,13 @@ export default async function FotosCanchaPage({ params }: { params: Promise<{ id
       <p className="text-ink-500">
         Las canchas con buenas fotos reciben muchas más reservas. Sube al menos 3.
       </p>
+
+      {!court.is_approved && (
+        <div className="card mt-5 border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+          ⏳ Esta cancha está pendiente de revisión. Un admin de Playmatch la revisará antes de
+          que aparezca públicamente en el sitio — esto suele tomar menos de 24 horas.
+        </div>
+      )}
 
       <div className="card mt-5 p-6">
         <PhotoUploader

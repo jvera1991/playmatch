@@ -70,7 +70,32 @@ animaciones, ver sección "Sistema de diseño"), panel del dueño completo
 fotos de canchas (Supabase Storage), calendario mensual del dueño estilo Google
 Calendar (`/panel/calendario`), mapa con Google Maps (`/mapa`) con filtro por
 comuna/barrio/punto cardinal de Medellín (`lib/medellin.ts`), geocodificación
-automática de la dirección al publicar una cancha (`lib/geocoding.ts`).
+automática de la dirección al publicar una cancha (`lib/geocoding.ts`), edición
+completa de canchas por el dueño (`/panel/canchas/[id]/editar`), campo de tamaño/
+formato (5v5/7v7/9v9/11v11, etc. — `lib/court-sizes.ts`) y de "cancha techada",
+sitio responsivo (nav móvil con hamburguesa, tablas/calendario con scroll horizontal
+en pantallas chicas), y **aprobación admin obligatoria para publicar canchas**
+(ver sección siguiente).
+
+**Aprobación de canchas por admin (2026-08-18):** antes, una cancha nueva quedaba
+visible en el sitio apenas el dueño la creaba, sin revisión — riesgo de que se
+publicara contenido basura. Ahora toda cancha nace con `courts.is_approved = false`
+y solo se muestra públicamente (home, `/buscar`, `/mapa`, `/canchas/[id]`) cuando
+`is_active = true AND is_approved = true`. El admin la aprueba desde
+`/admin/canchas` (sección "Canchas pendientes de aprobación" arriba de la lista
+general). Esto está reforzado en dos capas:
+- **RLS**: la política `courts_public_read_active` exige ambas columnas en true
+  para lectura pública (migración `20260818000009_court_approval_gate.sql`).
+- **Trigger de base de datos** (`protect_court_approval`, misma migración): un
+  dueño no puede auto-aprobar su propia cancha ni al crearla ni al editarla,
+  aunque llame a la API de Supabase directamente saltándose el formulario — solo
+  un usuario con `role = 'admin'` puede cambiar `is_approved`. Esta es defensa en
+  profundidad a propósito, porque el usuario planteó esto como un tema de
+  seguridad/moderación de contenido, no solo de UX.
+- Nota de diseño: editar una cancha ya aprobada (precio, descripción, etc.) NO la
+  regresa a "pendiente" — si en el futuro se detecta abuso vía ediciones después
+  de la aprobación inicial, considerar resetear `is_approved` en cambios de
+  `name`/`description`/fotos.
 
 **Bug corregido (2026-08-18):** el trigger `on_auth_user_created` que crea el
 `profile` al registrarse existía como función pero nunca se conectó a
@@ -79,6 +104,76 @@ paneles). Se corrigió con la migración `20260818000005_fix_missing_new_user_tr
 que también rellena el perfil de las cuentas que ya se habían visto afectadas.
 Si en el futuro una cuenta nueva vuelve a aparecer "sin rol", revisar primero que
 este trigger siga existiendo (`select * from pg_trigger where tgname = 'on_auth_user_created'`).
+
+**Bug corregido (2026-08-18) — canchas sin ubicación en el mapa:** la geocodificación
+(`lib/geocoding.ts`) fallaba en silencio para TODAS las canchas porque usaba la misma
+llave de Google Maps que el navegador (`NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`), la cual está
+restringida por "HTTP referrer". Esa restricción es correcta para el mapa en el
+navegador, pero bloquea llamadas servidor-a-servidor (Node.js no manda header
+`Referer` de navegador), así que la API de Google rechazaba la geocodificación con
+`REQUEST_DENIED` y la función devolvía `null` sin loguear nada. Se corrigió así:
+- `lib/geocoding.ts` ahora usa `GOOGLE_MAPS_SERVER_API_KEY` (una llave **separada**,
+  sin restricción de referrer — ver `.env.example` para cómo crearla), con fallback a
+  la llave pública si no está configurada.
+- Ahora loguea con `console.error` la razón exacta que devuelve Google
+  (`data.status` + `data.error_message`) en vez de fallar en silencio total — la
+  próxima vez que algo similar pase, revisar los logs del servidor primero.
+- Se agregó un botón "📍 Volver a ubicar en el mapa" en
+  `/panel/canchas/[id]/editar` para que el dueño pueda forzar un nuevo intento de
+  geocodificación sin tener que cambiar el texto de la dirección (antes solo se
+  regeocodificaba si la dirección/barrio cambiaban de valor).
+- **Pendiente para el usuario**: crear la llave `GOOGLE_MAPS_SERVER_API_KEY` en Google
+  Cloud Console (ver instrucciones en `.env.example`) y agregarla a `.env.local` y a
+  las variables de entorno de producción (EasyPanel) — mientras no exista, la
+  geocodificación seguirá fallando en producción por la misma restricción de referrer.
+
+**Bug corregido (2026-08-19) — reserva fallaba con "Unexpected end of JSON input":**
+`POST /api/bookings` llama a `createAdminClient()` (usa `SUPABASE_SERVICE_ROLE_KEY`)
+para liberar cupos abandonados; si esa variable está vacía, `@supabase/supabase-js`
+lanza una excepción no controlada y Next.js devuelve una respuesta sin cuerpo — el
+navegador fallaba al hacer `res.json()`. Se corrigió envolviendo el handler en
+try/catch para siempre devolver JSON con el error real. La causa de fondo era que
+`SUPABASE_SERVICE_ROLE_KEY` no estaba puesta en `.env.local` — recordar copiarla desde
+Supabase → Settings → API → "service_role secret" (nunca subirla a GitHub).
+
+**Nueva funcionalidad (2026-08-19) — cancelación de reservas por el jugador:**
+Antes no existía ninguna página donde un jugador viera sus propias reservas. Se
+agregó `/reservas` ("Mis reservas", enlace nuevo en el navbar) donde el jugador ve
+todas sus reservas y puede cancelar las que estén en `pending_payment` o `confirmed`,
+siempre que falten más de 3 horas para el inicio, dando un motivo obligatorio. Igual
+que con la aprobación de canchas, la regla de negocio (motivo obligatorio + ventana de
+3 horas) está reforzada con un trigger de base de datos
+(`enforce_booking_cancellation`, migración
+`20260819000001_booking_cancellation_by_player.sql`) — no es solo una validación del
+formulario. Nuevas columnas en `bookings`: `cancellation_reason`, `cancelled_at`,
+`cancelled_by`. El dueño de cancha y el admin pueden cancelar sin esa restricción de
+horario (mantenimiento, etc.), y el proceso automático que libera cupos no pagados
+sigue funcionando igual (el trigger detecta que no hay `auth.uid()` — service role —
+y no exige motivo ni ventana). El motivo de cancelación ahora se muestra también en
+`/panel/reservas` (dueño) y `/admin/reservas` (admin).
+
+**Nueva funcionalidad (2026-08-19) — calendario interactivo estilo Google Calendar:**
+Los chips de `/panel/calendario` (reservas y bloqueos) ahora son interactivos vía
+`components/calendar-event-chip.tsx`: al pasar el mouse muestra una vista previa
+flotante resumida, y al hacer clic abre una tarjeta centrada con el detalle completo
+(fecha larga, horario, sede/dirección, jugador y teléfono, precio para reservas; motivo
+y rango de fechas para bloqueos). La página server-side ahora trae más columnas por
+evento (venues, teléfono del jugador, total_price) para poder mostrar ese detalle sin
+otra consulta. Se agregó `bogotaFechaLarga()` con el mismo patrón manual (sin
+`Intl`/`toLocaleString`) que ya usa `slot-picker.tsx`, para evitar el mismo bug de
+hydration mismatch entre servidor y navegador.
+
+**Bug corregido (2026-08-19) — franja bloqueada se guardaba con la hora incorrecta:**
+en `/panel/canchas/[id]/horarios`, el formulario "Cerrar una franja puntual" usa
+`<input type="datetime-local">`, que devuelve texto sin zona horaria (ej.
+"2026-08-23T09:14"). Antes se guardaba ese texto tal cual en la columna
+`timestamptz` — Postgres lo interpretaba como UTC en vez de hora de Bogotá, así que
+un bloqueo de "9:00 a 11:00 a.m." quedaba guardado como si fuera "9:00-11:00 UTC" (es
+decir, 4:00-6:00 a.m. hora de Bogotá) — por eso el calendario mostraba una hora
+distinta a la que el dueño escribió. Se corrigió con `bogotaLocalToUtcIso()` en esa
+misma página, que convierte la hora local ingresada a UTC antes de guardarla (suma 5
+horas). El bloqueo que ya estaba mal guardado en producción se corrigió directamente
+en la base de datos.
 
 Pendiente, con TODOs marcados en el código correspondiente:
 

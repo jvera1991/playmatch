@@ -16,7 +16,8 @@ export default async function MapaPage({
   let query = supabase
     .from("courts")
     .select("id, name, sport, price_per_hour, venues!inner(name, neighborhood, city, comuna, lat, lng)")
-    .eq("is_active", true);
+    .eq("is_active", true)
+    .eq("is_approved", true);
 
   if (deporte) query = query.eq("sport", deporte);
   if (comuna) query = query.eq("venues.comuna", comuna.nombre);

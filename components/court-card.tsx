@@ -21,6 +21,8 @@ export function CourtCard({
     name: string;
     sport: string;
     price_per_hour: number;
+    size?: string | null;
+    is_covered?: boolean | null;
     venues: { name: string; neighborhood: string | null; city: string } | null;
     court_photos?: { url: string }[] | null;
   };
@@ -49,7 +51,11 @@ export function CourtCard({
         </div>
       )}
       <div className="p-4">
-        <p className="badge bg-brand-50 text-brand-700">{SPORT_LABEL[court.sport] ?? court.sport}</p>
+        <div className="flex flex-wrap gap-1.5">
+          <p className="badge bg-brand-50 text-brand-700">{SPORT_LABEL[court.sport] ?? court.sport}</p>
+          {court.size && <p className="badge bg-ink-100 text-ink-600">{court.size}</p>}
+          {court.is_covered && <p className="badge bg-sky-50 text-sky-700">☂️ Techada</p>}
+        </div>
         <h3 className="mt-2 font-semibold text-ink-900">{court.name}</h3>
         <p className="text-sm text-ink-400">
           {court.venues?.neighborhood ? `${court.venues.neighborhood}, ` : ""}

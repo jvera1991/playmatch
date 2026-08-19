@@ -4,7 +4,28 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { Slot } from "@/lib/availability";
 
-const HORA_BOGOTA = { hour: "2-digit", minute: "2-digit", timeZone: "America/Bogota" } as const;
+// No usamos toLocaleTimeString("es-CO", ...) directamente: Node.js (servidor)
+// y Chrome (navegador) traen versiones distintas de ICU y formatean la hora
+// en español con un espacio distinto antes de "a.m."/"p.m." (uno usa espacio
+// normal, el otro un espacio angosto invisible) — el texto se ve idéntico a
+// simple vista pero es un carácter diferente, así que React detecta un
+// "hydration mismatch" y muestra el error en pantalla. Formateamos la hora a
+// mano en base a partes en inglés (estable entre servidor y navegador) para
+// que el HTML del servidor y el del cliente sean carácter por carácter
+// iguales.
+function formatHoraBogota(date: Date): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+    timeZone: "America/Bogota",
+  }).formatToParts(date);
+  const hour = parts.find((p) => p.type === "hour")?.value ?? "00";
+  const minute = parts.find((p) => p.type === "minute")?.value ?? "00";
+  const dayPeriod = parts.find((p) => p.type === "dayPeriod")?.value ?? "AM";
+  const suffix = dayPeriod.toUpperCase().startsWith("A") ? "a.m." : "p.m.";
+  return `${hour}:${minute} ${suffix}`;
+}
 
 export function SlotPicker({ courtId, slots }: { courtId: string; slots: Slot[] }) {
   const [selected, setSelected] = useState<Slot | null>(null);
@@ -69,7 +90,7 @@ export function SlotPicker({ courtId, slots }: { courtId: string; slots: Slot[] 
                 .filter(Boolean)
                 .join(" ")}
             >
-              {slot.start.toLocaleTimeString("es-CO", HORA_BOGOTA)}
+              {formatHoraBogota(slot.start)}
             </button>
           );
         })}
@@ -85,7 +106,7 @@ export function SlotPicker({ courtId, slots }: { courtId: string; slots: Slot[] 
         <button onClick={reservar} disabled={isPending} className="btn-primary mt-4 w-full animate-fade-in">
           {isPending
             ? "Creando reserva..."
-            : `Reservar ${selected.start.toLocaleTimeString("es-CO", HORA_BOGOTA)} - ${selected.end.toLocaleTimeString("es-CO", HORA_BOGOTA)}`}
+            : `Reservar ${formatHoraBogota(selected.start)} - ${formatHoraBogota(selected.end)}`}
         </button>
       )}
     </div>

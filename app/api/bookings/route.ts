@@ -8,6 +8,23 @@ const HOLD_MINUTES = 15; // minutos que se aparta un cupo mientras el jugador pa
 // Crea una reserva en estado "pending_payment" y devuelve los datos para
 // iniciar el checkout de Wompi (widget o link de pago).
 export async function POST(req: NextRequest) {
+  try {
+    return await handlePost(req);
+  } catch (err) {
+    // Cualquier excepción no controlada (ej. falta una variable de entorno
+    // como SUPABASE_SERVICE_ROLE_KEY) antes solo generaba una página de error
+    // de Next.js sin cuerpo — el navegador fallaba con "Unexpected end of
+    // JSON input" al intentar leerla como JSON, sin decir la causa real.
+    // Ahora sí devolvemos JSON con el mensaje, para poder diagnosticarlo.
+    console.error("[POST /api/bookings] error no controlado:", err);
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Error inesperado al crear la reserva." },
+      { status: 500 }
+    );
+  }
+}
+
+async function handlePost(req: NextRequest) {
   const supabase = await createClient();
   const {
     data: { user },

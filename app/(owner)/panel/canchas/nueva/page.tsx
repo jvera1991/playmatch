@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { requireOwner } from "@/lib/guards";
 import { ComunaBarrioSelect } from "@/components/comuna-barrio-select";
+import { SportSizeSelect } from "@/components/sport-size-select";
 import { findComuna } from "@/lib/medellin";
 import { geocodeAddress } from "@/lib/geocoding";
 import { OWNER_LINKS as LINKS } from "@/lib/owner-links";
@@ -90,8 +91,10 @@ export default async function NuevaCanchaPage() {
       .insert({
         venue_id: venue!.id,
         sport: String(formData.get("sport")),
+        size: String(formData.get("size") || ""),
         name: String(formData.get("name")),
         price_per_hour: Number(formData.get("price_per_hour")),
+        is_covered: formData.get("is_covered") === "on",
       })
       .select("id")
       .single();
@@ -126,14 +129,8 @@ export default async function NuevaCanchaPage() {
 
         <ComunaBarrioSelect />
 
-        <div>
-          <label className="text-sm font-medium text-ink-700">Deporte</label>
-          <select name="sport" required className="input mt-1">
-            <option value="futbol">⚽ Fútbol sintético</option>
-            <option value="padel">🎾 Pádel</option>
-            <option value="voley">🏐 Vóley</option>
-          </select>
-        </div>
+        <SportSizeSelect />
+
         <div>
           <label className="text-sm font-medium text-ink-700">Nombre de la cancha</label>
           <input name="name" required className="input mt-1" placeholder="Ej. Cancha 1" />
@@ -142,6 +139,12 @@ export default async function NuevaCanchaPage() {
           <label className="text-sm font-medium text-ink-700">Precio por hora (COP)</label>
           <input name="price_per_hour" type="number" min={0} required className="input mt-1" />
         </div>
+
+        <label className="flex items-center gap-2 text-sm text-ink-700">
+          <input type="checkbox" name="is_covered" className="h-4 w-4 rounded border-ink-300" />
+          Cancha techada (cubierta)
+        </label>
+
         <button className="btn-primary w-full">Publicar cancha</button>
       </form>
     </DashboardShell>

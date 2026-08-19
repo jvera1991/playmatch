@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/(auth)/actions";
+import { MobileNav } from "@/components/mobile-nav";
 
 const ROLE_LABEL: Record<string, string> = {
   player: "Jugador",
@@ -49,7 +50,7 @@ export async function Navbar() {
           </Link>
 
           {!user && (
-            <>
+            <div className="hidden items-center gap-2 sm:flex">
               <Link
                 href="/login"
                 className="rounded-lg px-3 py-2 font-medium text-ink-600 transition-colors hover:bg-ink-50 hover:text-ink-900"
@@ -59,11 +60,17 @@ export async function Navbar() {
               <Link href="/registro" className="btn-primary !px-4 !py-2 text-sm">
                 Publicar mi cancha
               </Link>
-            </>
+            </div>
           )}
 
           {user && profile && (
-            <div className="flex items-center gap-1.5">
+            <div className="hidden items-center gap-1.5 sm:flex">
+              <Link
+                href="/reservas"
+                className="rounded-lg px-3 py-2 font-medium text-ink-600 transition-colors hover:bg-ink-50 hover:text-ink-900"
+              >
+                Mis reservas
+              </Link>
               {profile.role === "owner" && (
                 <Link
                   href="/panel"
@@ -80,7 +87,7 @@ export async function Navbar() {
                   Admin
                 </Link>
               )}
-              <div className="ml-1 hidden items-center gap-2 rounded-full bg-ink-50 py-1 pl-1 pr-3 sm:flex">
+              <div className="ml-1 flex items-center gap-2 rounded-full bg-ink-50 py-1 pl-1 pr-3">
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-100 text-xs font-semibold text-brand-700">
                   {profile.full_name?.[0]?.toUpperCase() ?? "?"}
                 </span>
@@ -94,6 +101,13 @@ export async function Navbar() {
               </form>
             </div>
           )}
+
+          <MobileNav
+            isLoggedIn={!!user}
+            role={profile?.role ?? null}
+            fullName={profile?.full_name ?? null}
+            onSignOut={signOut}
+          />
         </nav>
       </div>
     </header>

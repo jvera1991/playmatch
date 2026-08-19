@@ -35,10 +35,11 @@ export default async function CanchaDetallePage({
   const { data: court } = await supabase
     .from("courts")
     .select(
-      "id, name, sport, price_per_hour, slot_duration_minutes, description, venues(name, address, neighborhood, city, lat, lng), court_photos(url, sort_order)"
+      "id, name, sport, size, is_covered, price_per_hour, slot_duration_minutes, description, venues(name, address, neighborhood, city, lat, lng), court_photos(url, sort_order)"
     )
     .eq("id", id)
     .eq("is_active", true)
+    .eq("is_approved", true)
     .single();
 
   if (!court) notFound();
@@ -109,7 +110,11 @@ export default async function CanchaDetallePage({
 
       <div className="mx-auto max-w-3xl px-4 py-8">
         <div className="animate-fade-up">
-          <p className="badge bg-brand-50 text-brand-700">{SPORT_LABEL[court.sport] ?? court.sport}</p>
+          <div className="flex flex-wrap gap-1.5">
+            <p className="badge bg-brand-50 text-brand-700">{SPORT_LABEL[court.sport] ?? court.sport}</p>
+            {court.size && <p className="badge bg-ink-100 text-ink-600">{court.size}</p>}
+            {court.is_covered && <p className="badge bg-sky-50 text-sky-700">☂️ Techada</p>}
+          </div>
           <h1 className="mt-2 text-2xl font-bold text-ink-900 sm:text-3xl">{court.name}</h1>
           <p className="mt-1 text-ink-500">
             {venue?.name} — {venue?.address}, {venue?.neighborhood}, {venue?.city}

@@ -14,8 +14,11 @@ export default async function HomePage() {
 
   const { data: courts } = await supabase
     .from("courts")
-    .select("id, name, sport, price_per_hour, venues(name, neighborhood, city), court_photos(url)")
+    .select(
+      "id, name, sport, size, is_covered, price_per_hour, venues(name, neighborhood, city), court_photos(url)"
+    )
     .eq("is_active", true)
+    .eq("is_approved", true)
     .limit(9);
 
   return (

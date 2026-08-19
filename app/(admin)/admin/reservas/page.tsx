@@ -38,7 +38,7 @@ export default async function AdminReservasPage() {
   const { data: bookings } = await supabase
     .from("bookings")
     .select(
-      "id, start_at, status, total_price, commission_amount, courts(name), profiles:player_id(full_name)"
+      "id, start_at, status, total_price, commission_amount, cancellation_reason, courts(name), profiles:player_id(full_name)"
     )
     .order("start_at", { ascending: false })
     .limit(100);
@@ -59,8 +59,8 @@ export default async function AdminReservasPage() {
         <StatCard label="Comisión Playmatch" value={`$${totalComision.toLocaleString("es-CO")}`} />
       </div>
 
-      <div className="card mt-5 overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="card mt-5 overflow-x-auto p-0">
+        <table className="w-full min-w-[640px] text-sm">
           <thead className="bg-ink-50 text-left text-xs uppercase tracking-wide text-ink-400">
             <tr>
               <th className="px-4 py-3">Cancha</th>
@@ -84,6 +84,9 @@ export default async function AdminReservasPage() {
                 </td>
                 <td className="px-4 py-3">
                   <span className={`badge ${STATUS_STYLE[b.status]}`}>{STATUS_LABEL[b.status]}</span>
+                  {b.status === "cancelled" && b.cancellation_reason && (
+                    <p className="mt-1 max-w-[220px] text-xs text-ink-400">{b.cancellation_reason}</p>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-right font-medium text-ink-800">
                   ${Number(b.commission_amount).toLocaleString("es-CO")}
