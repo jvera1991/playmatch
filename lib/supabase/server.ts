@@ -5,14 +5,6 @@ import { cookies } from "next/headers";
 export async function createClient() {
   const cookieStore = await cookies();
 
-  // DEBUG TEMPORAL — quitar una vez resuelto el problema de despliegue en producción.
-  console.error(
-    "[DEBUG runtime] NEXT_PUBLIC_SUPABASE_URL =",
-    JSON.stringify(process.env.NEXT_PUBLIC_SUPABASE_URL),
-    "| NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY presente =",
-    Boolean(process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)
-  );
-
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,

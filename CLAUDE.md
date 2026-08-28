@@ -224,6 +224,41 @@ EasyPanel tal cual (build type: Dockerfile, puerto 3000). `docker-compose.yml` +
 `nginx/` quedan como alternativa manual documentada en la sección 3-B, por si el
 usuario deja EasyPanel en el futuro.
 
+## Auditoría de seguridad (28/08/2026)
+
+Se hizo una revisión completa (SAST + secretos + dependencias + config + storage) del
+código y del despliegue en producción. Hallazgos y arreglos:
+
+- **CRÍTICO — corregido**: la policy RLS `profiles_update_own` no tenía `with check`,
+  así que cualquier usuario autenticado podía, con una llamada directa a la API de
+  Supabase (sin pasar por la UI), poner su propio `role='admin'` o
+  `is_approved_owner=true`. Se corrigió con el trigger `protect_profile_privilege_fields`
+  (migración `20260828000001_security_hardening.sql`), que repone esos dos campos a su
+  valor anterior salvo que quien edite ya sea admin — mismo patrón que ya se usaba para
+  `courts.is_approved`.
+- **MEDIO — corregido**: el bucket `court-photos` no tenía `file_size_limit` ni
+  `allowed_mime_types` en Storage — la validación de `photo-uploader.tsx` es solo en el
+  navegador y se salta con una llamada directa a la API. Ahora el bucket mismo limita a
+  5MB y a `image/jpeg`, `image/png`, `image/webp`.
+- **MEDIO — corregido**: no había ningún header de seguridad HTTP (CSP, HSTS,
+  X-Frame-Options, etc.) — se agregaron en `next.config.ts` vía `headers()`.
+- **MEDIO — corregido**: la verificación de firma del webhook de Wompi
+  (`app/api/webhooks/wompi/route.ts`) y del secreto del cron de recordatorios
+  (`app/api/cron/reminders/route.ts`) usaban `!==` para comparar strings, vulnerable a
+  timing attack. Se cambiaron a `crypto.timingSafeEqual`.
+- **BAJO — corregido**: se quitaron los tres bloques de `console.error`/`RUN echo` de
+  diagnóstico temporal que quedaron activos en producción tras el despliegue
+  (`lib/supabase/middleware.ts`, `lib/supabase/server.ts`, `Dockerfile`) — el de
+  middleware corría en cada request.
+- **PENDIENTE — acción manual del usuario**: `CRON_SECRET` sigue con el valor de
+  ejemplo/placeholder en `.env.example` y en desarrollo (`dev-secret`). Hay que
+  confirmar que en las variables de entorno de producción en EasyPanel tenga un valor
+  aleatorio real (no el placeholder), y rotarlo si no.
+- **Revisado, sin hallazgos**: `npm audit` sin vulnerabilidades; sin `eval`/
+  `dangerouslySetInnerHTML`; sin secretos hardcodeados en el código; `.gitignore` cubre
+  correctamente `.env`/`.env.local`; todas las páginas de `/panel` y `/admin` llaman
+  `requireOwner()`/`requireAdmin()`.
+
 ## Reglas para quien continúe este proyecto
 
 - No reescribir el esquema de base de datos sin revisar `supabase/migrations/` primero

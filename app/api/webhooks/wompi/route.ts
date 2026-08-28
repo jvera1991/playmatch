@@ -16,8 +16,17 @@ export async function POST(req: NextRequest) {
   const concat = properties.map((p: string) => getNestedValue(payload, p)).join("");
   const toHash = concat + timestamp + secret;
   const expected = crypto.createHash("sha256").update(toHash).digest("hex");
+  const received = typeof signature?.checksum === "string" ? signature.checksum : "";
 
-  if (expected !== signature?.checksum) {
+  // Comparación en tiempo constante: evita que un atacante pueda deducir la
+  // firma correcta byte a byte midiendo cuánto tarda cada intento fallido.
+  const expectedBuf = Buffer.from(expected, "hex");
+  const receivedBuf = Buffer.from(received, "hex");
+  const valid =
+    expectedBuf.length === receivedBuf.length &&
+    crypto.timingSafeEqual(expectedBuf, receivedBuf);
+
+  if (!valid) {
     return NextResponse.json({ error: "Firma inválida" }, { status: 401 });
   }
 

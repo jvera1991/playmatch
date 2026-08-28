@@ -12,10 +12,6 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-# --- DIAGNÓSTICO TEMPORAL: confirmar si EasyPanel deja algún archivo .env en
-# el contexto de build, y si el build-arg llega con valor. Quitar después de
-# resolver el problema de las variables NEXT_PUBLIC_ vacías. ---
-RUN echo "=== Archivos .env en el contexto de build ===" && ls -la .env* 2>&1 || echo "(ninguno encontrado)"
 # Variables públicas necesarias en build time (Next.js las incrusta en el bundle del cliente)
 ARG NEXT_PUBLIC_SUPABASE_URL
 ARG NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
@@ -27,7 +23,6 @@ ENV NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 ENV NEXT_PUBLIC_WOMPI_ENV=$NEXT_PUBLIC_WOMPI_ENV
 ENV NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=$NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
-RUN echo "=== DEBUG build-arg NEXT_PUBLIC_SUPABASE_URL='$NEXT_PUBLIC_SUPABASE_URL' ==="
 RUN npm run build
 
 # ---- runtime (imagen final liviana gracias a output: "standalone") ----

@@ -5,14 +5,6 @@ import { NextResponse, type NextRequest } from "next/server";
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
 
-  // DEBUG TEMPORAL — quitar una vez resuelto el problema de despliegue en producción.
-  console.error(
-    "[DEBUG middleware] NEXT_PUBLIC_SUPABASE_URL =",
-    JSON.stringify(process.env.NEXT_PUBLIC_SUPABASE_URL),
-    "| NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY presente =",
-    Boolean(process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)
-  );
-
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,

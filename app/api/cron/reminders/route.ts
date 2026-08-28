@@ -1,12 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
+import crypto from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/server";
 
 // Se dispara periódicamente (ver supabase/migrations/..._pg_cron.sql o un
 // cron del sistema en el VPS) para mandar el recordatorio de WhatsApp 1h antes.
 // Protegido con un secreto simple para que no lo llame cualquiera.
 export async function GET(req: NextRequest) {
-  const auth = req.headers.get("authorization");
-  if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
+  const auth = req.headers.get("authorization") ?? "";
+  const expected = `Bearer ${process.env.CRON_SECRET}`;
+  const authBuf = Buffer.from(auth);
+  const expectedBuf = Buffer.from(expected);
+  const valid =
+    authBuf.length === expectedBuf.length &&
+    crypto.timingSafeEqual(authBuf, expectedBuf);
+
+  if (!valid) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
