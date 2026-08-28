@@ -38,6 +38,7 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   output: "standalone", // clave para correr liviano en Docker en el VPS
+  poweredByHeader: false, // no revelar "X-Powered-By: Next.js" al backend
   images: {
     remotePatterns: [
       {
