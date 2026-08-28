@@ -3,17 +3,8 @@ import { getAvailableSlots } from "@/lib/availability";
 import { SlotPicker } from "@/components/slot-picker";
 import { Navbar } from "@/components/navbar";
 import { notFound } from "next/navigation";
-
-const SPORT_LABEL: Record<string, string> = {
-  futbol: "Fútbol 5",
-  padel: "Pádel",
-  voley: "Vóley",
-};
-const SPORT_EMOJI: Record<string, string> = {
-  futbol: "⚽",
-  padel: "🎾",
-  voley: "🏐",
-};
+import { Umbrella } from "@phosphor-icons/react/ssr";
+import { SportIcon, SPORT_LABEL } from "@/components/sport-icon";
 
 function hoyBogota() {
   return new Date().toLocaleDateString("en-CA", { timeZone: "America/Bogota" });
@@ -103,8 +94,8 @@ export default async function CanchaDetallePage({
           ))}
         </div>
       ) : (
-        <div className="flex h-40 items-center justify-center bg-brand-gradient text-7xl sm:h-56">
-          <span className="drop-shadow">{SPORT_EMOJI[court.sport] ?? "🏟️"}</span>
+        <div className="flex h-40 items-center justify-center bg-brand-gradient sm:h-56">
+          <SportIcon sport={court.sport} weight="duotone" size={64} className="text-white drop-shadow" />
         </div>
       )}
 
@@ -113,11 +104,15 @@ export default async function CanchaDetallePage({
           <div className="flex flex-wrap gap-1.5">
             <p className="badge bg-brand-50 text-brand-700">{SPORT_LABEL[court.sport] ?? court.sport}</p>
             {court.size && <p className="badge bg-ink-100 text-ink-600">{court.size}</p>}
-            {court.is_covered && <p className="badge bg-sky-50 text-sky-700">☂️ Techada</p>}
+            {court.is_covered && (
+              <p className="badge inline-flex items-center gap-1 bg-sky-50 text-sky-700">
+                <Umbrella weight="fill" size={12} /> Techada
+              </p>
+            )}
           </div>
           <h1 className="mt-2 text-2xl font-bold text-ink-900 sm:text-3xl">{court.name}</h1>
           <p className="mt-1 text-ink-500">
-            {venue?.name} — {venue?.address}, {venue?.neighborhood}, {venue?.city}
+            {venue?.name} · {venue?.address}, {venue?.neighborhood}, {venue?.city}
           </p>
           {court.description && <p className="mt-3 text-sm text-ink-600">{court.description}</p>}
           <p className="mt-4 text-2xl font-bold text-brand-700">

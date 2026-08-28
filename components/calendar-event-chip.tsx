@@ -127,7 +127,7 @@ export function CalendarEventChip({ event }: { event: CalendarEvent }) {
                   {(event.venueName || event.venueAddress) && (
                     <p className="flex items-start gap-2 text-ink-700">
                       <span>📍</span> {event.venueName}
-                      {event.venueAddress ? ` — ${event.venueAddress}` : ""}
+                      {event.venueAddress ? `, ${event.venueAddress}` : ""}
                     </p>
                   )}
                   <p className="flex items-start gap-2 text-ink-700">
@@ -157,7 +157,7 @@ export function CalendarEventChip({ event }: { event: CalendarEvent }) {
                   {(event.venueName || event.venueAddress) && (
                     <p className="flex items-start gap-2 text-ink-700">
                       <span>📍</span> {event.venueName}
-                      {event.venueAddress ? ` — ${event.venueAddress}` : ""}
+                      {event.venueAddress ? `, ${event.venueAddress}` : ""}
                     </p>
                   )}
                   {event.reason && (

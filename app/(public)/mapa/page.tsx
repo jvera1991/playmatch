@@ -3,6 +3,7 @@ import { Navbar } from "@/components/navbar";
 import { BuscarFiltros } from "@/components/buscar-filtros";
 import { MapView, type MapCourt } from "@/components/map-view";
 import { findComuna, getCardinalZone, type PuntoCardinal } from "@/lib/medellin";
+import { ListBullets } from "@phosphor-icons/react/ssr";
 
 export default async function MapaPage({
   searchParams,
@@ -72,7 +73,11 @@ export default async function MapaPage({
           comunaId={comuna_id}
           barrio={barrio}
           cardinal={cardinal}
-          otroDestino={{ href: `/buscar${queryString ? `?${queryString}` : ""}`, label: "📋 Ver en lista" }}
+          otroDestino={{
+            href: `/buscar${queryString ? `?${queryString}` : ""}`,
+            label: "Ver en lista",
+            icon: <ListBullets size={16} weight="bold" />,
+          }}
         />
 
         <div className="mt-6">

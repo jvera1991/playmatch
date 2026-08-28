@@ -259,6 +259,33 @@ código y del despliegue en producción. Hallazgos y arreglos:
   correctamente `.env`/`.env.local`; todas las páginas de `/panel` y `/admin` llaman
   `requireOwner()`/`requireAdmin()`.
 
+## Documento de arquitectura y rediseño visual (28/08/2026)
+
+Se entregó al usuario un Word (`Playmatch_Documento_de_Arquitectura.docx`) explicando
+toda la app en términos no técnicos, con un checklist de qué falta antes de operar con
+clientes reales (Wompi real, dominio, términos y condiciones, correo transaccional,
+WhatsApp real, backups, monitoreo, rate limiting, etc. — ver el documento o el
+resumen guardado en el proyecto de Claude).
+
+También se hizo un primer rediseño visual (dirección: premium/confiable, estilo
+Airbnb/Booking):
+- Nuevas dependencias: `@phosphor-icons/react` (íconos) y `motion` (animaciones). Si
+  clonas el repo de cero, corre `npm install` antes de `npm run build`.
+- `components/sport-icon.tsx` es la fuente única del ícono de cada deporte — no
+  vuelvas a poner emojis (⚽🎾🏐) sueltos en componentes nuevos, importa `SportIcon`.
+- El hero de la homepage usa una foto de Unsplash como marcador de posición
+  (`HERO_PHOTO` en `app/(public)/page.tsx`) — reemplázala por fotos reales de canchas
+  cuando haya suficientes publicadas.
+- El CSP de `next.config.ts` incluye `images.unsplash.com` en `img-src` por esa foto;
+  si la reemplazas por otra fuente externa, actualiza el CSP o el navegador la
+  bloquea.
+- `components/how-it-works.tsx` es un Client Component con `motion/react` — patrón a
+  seguir para futuras animaciones de scroll (usar `whileInView`, nunca
+  `window.addEventListener("scroll")`).
+- Quedó pendiente (fuera de alcance por ahora): íconos dentro de `<select>` nativos,
+  marcadores del mapa de Google (limitación de la API), y el sidebar de `/admin`
+  (herramienta interna).
+
 ## Reglas para quien continúe este proyecto
 
 - No reescribir el esquema de base de datos sin revisar `supabase/migrations/` primero

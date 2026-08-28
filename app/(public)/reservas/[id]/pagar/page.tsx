@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Navbar } from "@/components/navbar";
 import { buildWompiCheckoutFields, isWompiConfigured } from "@/lib/wompi";
 import { notFound, redirect } from "next/navigation";
+import { CheckCircle } from "@phosphor-icons/react/ssr";
 
 export default async function PagarReservaPage({
   params,
@@ -34,14 +35,14 @@ export default async function PagarReservaPage({
       <main>
         <Navbar />
         <div className="mx-auto flex min-h-[70vh] max-w-lg flex-col items-center justify-center px-4 text-center">
-          <span className="flex h-16 w-16 animate-fade-up items-center justify-center rounded-full bg-brand-100 text-3xl">
-            ✅
+          <span className="flex h-16 w-16 animate-fade-up items-center justify-center rounded-full bg-brand-100 text-brand-700">
+            <CheckCircle weight="fill" size={32} />
           </span>
           <h1 className="mt-4 animate-fade-up text-xl font-bold text-ink-900">
             ¡Reserva confirmada!
           </h1>
           <p className="mt-2 animate-fade-up text-sm text-ink-500">
-            Te esperamos en {court.name} — {court.venues?.name}. Te llegará un recordatorio
+            Te esperamos en {court.name}, {court.venues?.name}. Te llegará un recordatorio
             por WhatsApp una hora antes.
           </p>
         </div>
@@ -66,7 +67,7 @@ export default async function PagarReservaPage({
         <div className="card mt-4 animate-fade-up p-5">
           <p className="font-semibold text-ink-900">{court.name}</p>
           <p className="text-sm text-ink-500">
-            {court.venues?.name} — {court.venues?.address}
+            {court.venues?.name} · {court.venues?.address}
           </p>
           <p className="mt-2 text-sm text-ink-700">
             {new Date(booking.start_at).toLocaleString("es-CO", { timeZone: "America/Bogota" })} –{" "}

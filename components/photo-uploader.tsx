@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
+import { Camera } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 
 const MAX_FOTOS = 6;
@@ -96,7 +97,7 @@ export function PhotoUploader({
         onClick={() => inputRef.current?.click()}
         className="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-ink-200 bg-white p-8 text-center transition-colors hover:border-brand-400 hover:bg-brand-50/30"
       >
-        <span className="text-3xl">📷</span>
+        <Camera weight="duotone" size={32} className="text-brand-500" />
         <p className="font-medium text-ink-700">
           {uploading || isPending ? "Subiendo..." : "Arrastra fotos aquí o haz clic para elegir"}
         </p>

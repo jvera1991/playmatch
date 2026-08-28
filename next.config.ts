@@ -26,7 +26,7 @@ const securityHeaders = [
       "script-src 'self' 'unsafe-inline' https://maps.googleapis.com https://checkout.wompi.co",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
-      "img-src 'self' data: blob: https://*.supabase.co https://maps.gstatic.com https://maps.googleapis.com",
+      "img-src 'self' data: blob: https://*.supabase.co https://maps.gstatic.com https://maps.googleapis.com https://images.unsplash.com",
       "connect-src 'self' https://*.supabase.co https://maps.googleapis.com",
       "frame-src 'self' https://checkout.wompi.co",
       "frame-ancestors 'none'",

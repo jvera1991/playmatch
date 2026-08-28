@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Buildings, Umbrella, HourglassMedium } from "@phosphor-icons/react/ssr";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { requireOwner } from "@/lib/guards";
 import { OWNER_LINKS as LINKS } from "@/lib/owner-links";
@@ -35,7 +36,11 @@ export default async function MisCanchasPage() {
               <div className="flex flex-wrap gap-1.5">
                 <p className="badge bg-brand-50 text-brand-700">{SPORT_LABEL[c.sport] ?? c.sport}</p>
                 {c.size && <p className="badge bg-ink-100 text-ink-600">{c.size}</p>}
-                {c.is_covered && <p className="badge bg-sky-50 text-sky-700">☂️ Techada</p>}
+                {c.is_covered && (
+                  <p className="badge inline-flex items-center gap-1 bg-sky-50 text-sky-700">
+                    <Umbrella weight="fill" size={12} /> Techada
+                  </p>
+                )}
               </div>
               <p className="mt-1 font-semibold text-ink-900">{c.name}</p>
               <p className="text-sm text-ink-500">
@@ -47,8 +52,8 @@ export default async function MisCanchasPage() {
                 )}
               </p>
               {!c.is_approved && (
-                <p className="mt-1 badge bg-amber-50 text-amber-700">
-                  ⏳ Pendiente de revisión por un admin
+                <p className="mt-1 badge inline-flex items-center gap-1 bg-amber-50 text-amber-700">
+                  <HourglassMedium weight="fill" size={12} /> Pendiente de revisión por un admin
                 </p>
               )}
             </div>
@@ -68,7 +73,9 @@ export default async function MisCanchasPage() {
 
         {!courts?.length && (
           <div className="card flex flex-col items-center gap-3 p-10 text-center">
-            <span className="text-3xl">🏟️</span>
+            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-50 text-brand-600">
+              <Buildings weight="duotone" size={28} />
+            </span>
             <p className="text-ink-500">Todavía no has publicado ninguna cancha.</p>
             {profile?.is_approved_owner ? (
               <Link href="/panel/canchas/nueva" className="btn-primary">

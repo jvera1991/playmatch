@@ -75,7 +75,7 @@ export default async function MisReservasPage() {
                 <div>
                   <p className="font-semibold text-ink-900">{court?.name}</p>
                   <p className="text-sm text-ink-500">
-                    {court?.venues?.name} — {court?.venues?.address}
+                    {court?.venues?.name} · {court?.venues?.address}
                   </p>
                   <p className="mt-1 text-sm text-ink-700">
                     {startsAt.toLocaleString("es-CO", { timeZone: "America/Bogota" })}
@@ -101,7 +101,7 @@ export default async function MisReservasPage() {
                   )}
                   {!puedeCancelar && (b.status === "pending_payment" || b.status === "confirmed") && (
                     <p className="text-right text-xs text-ink-400">
-                      Ya no se puede cancelar — faltan menos de {CANCELACION_HORAS}h.
+                      Ya no se puede cancelar: faltan menos de {CANCELACION_HORAS}h.
                     </p>
                   )}
                 </div>

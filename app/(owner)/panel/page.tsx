@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Buildings } from "@phosphor-icons/react/ssr";
 import { DashboardShell, StatCard } from "@/components/dashboard-shell";
 import { requireOwner } from "@/lib/guards";
 import { OWNER_LINKS as LINKS } from "@/lib/owner-links";
@@ -110,7 +111,9 @@ export default async function PanelOverviewPage() {
 
       {!courtCount && (
         <div className="card mt-6 flex flex-col items-center gap-3 p-8 text-center">
-          <span className="text-3xl">🏟️</span>
+          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-50 text-brand-600">
+            <Buildings weight="duotone" size={28} />
+          </span>
           <p className="text-ink-600">Aún no has publicado ninguna cancha.</p>
           <Link href="/panel/canchas/nueva" className="btn-primary">
             Publicar mi primera cancha

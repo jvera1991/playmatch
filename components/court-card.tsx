@@ -1,16 +1,6 @@
 import Link from "next/link";
-
-const SPORT_LABEL: Record<string, string> = {
-  futbol: "Fútbol 5",
-  padel: "Pádel",
-  voley: "Vóley",
-};
-
-const SPORT_EMOJI: Record<string, string> = {
-  futbol: "⚽",
-  padel: "🎾",
-  voley: "🏐",
-};
+import { Umbrella } from "@phosphor-icons/react/ssr";
+import { SportIcon, SPORT_LABEL } from "@/components/sport-icon";
 
 export function CourtCard({
   court,
@@ -44,17 +34,24 @@ export function CourtCard({
           className="h-32 w-full object-cover transition-transform duration-300 group-hover:scale-105"
         />
       ) : (
-        <div className="flex h-32 items-center justify-center bg-brand-gradient text-5xl">
-          <span className="drop-shadow-sm transition-transform duration-300 group-hover:scale-110">
-            {SPORT_EMOJI[court.sport] ?? "🏟️"}
-          </span>
+        <div className="flex h-32 items-center justify-center bg-brand-gradient">
+          <SportIcon
+            sport={court.sport}
+            weight="duotone"
+            size={44}
+            className="text-white drop-shadow-sm transition-transform duration-300 group-hover:scale-110"
+          />
         </div>
       )}
       <div className="p-4">
         <div className="flex flex-wrap gap-1.5">
           <p className="badge bg-brand-50 text-brand-700">{SPORT_LABEL[court.sport] ?? court.sport}</p>
           {court.size && <p className="badge bg-ink-100 text-ink-600">{court.size}</p>}
-          {court.is_covered && <p className="badge bg-sky-50 text-sky-700">☂️ Techada</p>}
+          {court.is_covered && (
+            <p className="badge inline-flex items-center gap-1 bg-sky-50 text-sky-700">
+              <Umbrella weight="fill" size={12} /> Techada
+            </p>
+          )}
         </div>
         <h3 className="mt-2 font-semibold text-ink-900">{court.name}</h3>
         <p className="text-sm text-ink-400">

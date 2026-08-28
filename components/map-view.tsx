@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { MapTrifold, WarningCircle } from "@phosphor-icons/react";
 
 const SPORT_LABEL: Record<string, string> = { futbol: "Fútbol 5", padel: "Pádel", voley: "Vóley" };
 const SPORT_EMOJI: Record<string, string> = { futbol: "⚽", padel: "🎾", voley: "🏐" };
@@ -123,7 +124,7 @@ export function MapView({ courts, apiKey }: { courts: MapCourt[]; apiKey: string
   if (status === "no-key") {
     return (
       <div className="card flex flex-col items-center gap-2 p-10 text-center">
-        <span className="text-3xl">🗺️</span>
+        <MapTrifold weight="duotone" size={32} className="text-brand-500" />
         <p className="text-ink-600">
           El mapa no está disponible en este momento (falta configurar la llave de Google Maps).
         </p>
@@ -138,7 +139,7 @@ export function MapView({ courts, apiKey }: { courts: MapCourt[]; apiKey: string
   if (status === "load-error") {
     return (
       <div className="card flex flex-col items-center gap-2 p-10 text-center">
-        <span className="text-3xl">⚠️</span>
+        <WarningCircle weight="duotone" size={32} className="text-amber-500" />
         <p className="text-ink-600">
           Google Maps rechazó la solicitud (la llave sí llegó, pero algo la está bloqueando).
         </p>

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Playmatch — Reserva canchas en Medellín",
+  title: "Playmatch: Reserva canchas en Medellín",
   description: "Reserva canchas sintéticas de fútbol, pádel y vóley en Medellín, al instante.",
 };
 
