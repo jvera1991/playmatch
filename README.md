@@ -104,13 +104,22 @@ en **Settings → Secrets and variables → Actions**.
 - **WhatsApp Cloud API**: crea una app en https://developers.facebook.com, agrega el
   producto "WhatsApp", verifica tu negocio y copia el `Phone Number ID` y el
   `Access Token`.
-- **Google Maps**: en https://console.cloud.google.com, crea (o usa) un proyecto y
-  habilita **"Maps JavaScript API"** y **"Geocoding API"**. La llave va en
-  `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`. Se usa para: (1) ubicar automáticamente cada
-  cancha en el mapa a partir de la dirección que escribe el dueño, y (2) mostrar
-  el mapa de canchas en `/mapa`. Recuerda restringir la llave por dominio en
-  Google Cloud antes de lanzar a producción (Credenciales → tu llave → Restricciones
-  de la aplicación → Sitios web, agrega tu dominio real).
+- **Google Maps — dos llaves, no una** (importante, ya causó un bug real): en
+  https://console.cloud.google.com, crea (o usa) un proyecto y habilita
+  **"Maps JavaScript API"** y **"Geocoding API"**.
+  - `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` — la llave que dibuja el mapa en el navegador.
+    Restríngela por "HTTP referrer" a tu dominio real (Credenciales → tu llave →
+    Restricciones de la aplicación → Sitios web → agrega `https://playmatch.co/*` y,
+    si sigues probando en local, `http://localhost:3000/*`).
+  - `GOOGLE_MAPS_SERVER_API_KEY` — llave **separada** que el servidor usa para
+    convertir la dirección de una cancha en coordenadas (geocodificación) cuando el
+    dueño la publica o edita. Debe crearse SIN restricción de "HTTP referrer" (usa
+    "Ninguna", o "Direcciones IP" con la IP de este VPS) — Google rechaza las
+    llamadas del servidor si la llave tiene restricción de referrer, porque esas
+    llamadas no llevan el header de navegador. Restringida solo a "Geocoding API" en
+    "Restricciones de API". Detalle completo en `.env.example`.
+  - Las dos deben ir en el `.env`/variables de entorno de producción — nunca poner
+    solo una de las dos.
 
 ## 6. Base de datos
 
