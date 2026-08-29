@@ -286,6 +286,54 @@ Airbnb/Booking):
   marcadores del mapa de Google (limitación de la API), y el sidebar de `/admin`
   (herramienta interna).
 
+## Asistente de IA "PlayMatch AI" (29/08/2026)
+
+Primera fase del asistente conversacional (chat web), decidida con el usuario a
+partir de una propuesta técnica externa que compartió. Decisiones tomadas:
+proveedor OpenAI (function-calling), empezar por API + chat web, WhatsApp vía
+n8n queda diseñado pero NO construido todavía (falta conectar WhatsApp Cloud
+API, ver checklist del documento de arquitectura).
+
+Principio de seguridad no negociable: **la IA nunca escribe en la base de
+datos ni crea reservas directamente.** Solo puede llamar una herramienta de
+solo lectura; para reservar, siempre entrega el link real a `/canchas/[id]`
+donde el usuario completa el flujo ya existente (con su sesión, el candado de
+15 minutos y el constraint anti-doble-reserva a nivel de base de datos). Si en
+el futuro se agrega una herramienta que sí escriba (ej. crear reserva desde el
+chat), debe reutilizar `app/api/bookings/route.ts` tal cual, nunca duplicar su
+lógica de validación.
+
+Piezas nuevas:
+- `app/api/ai/canchas/buscar/route.ts` — endpoint de "herramienta" de solo
+  lectura. Reutiliza `lib/availability.ts` (la misma función que usan
+  `/buscar`, `/mapa` y `/canchas/[id]`) para calcular disponibilidad real por
+  cancha en una fecha dada. No requiere sesión (info pública). Pensado para
+  ser reutilizado después por el flujo de WhatsApp/n8n, no solo por el chat
+  web — por eso no depende de nada específico del widget.
+- `app/api/ai/chat/route.ts` — orquesta la conversación con `gpt-4o-mini` vía
+  el SDK `openai`, con `buscar_canchas` como única tool disponible. Sin
+  memoria en servidor: el cliente reenvía el historial en cada request (se
+  recorta a los últimos 20 mensajes). Requiere `OPENAI_API_KEY` en el entorno
+  del servidor (nunca `NEXT_PUBLIC_`).
+- `components/ai-chat-widget.tsx` — burbuja de chat flotante, montada en
+  `app/layout.tsx` (visible en toda la app, incluido `/panel` y `/admin` por
+  ahora — no se filtró por ruta). Los links `/canchas/...` que devuelve la IA
+  se convierten automáticamente en botones "Ver cancha y reservar".
+
+Pendiente para activar en producción: agregar `OPENAI_API_KEY` en las
+variables de entorno de EasyPanel (obtenerla en platform.openai.com). Sin esa
+llave el endpoint responde 503 de forma controlada (no rompe el resto del
+sitio). **Importante:** no se sobrescribió `.env.local` del usuario al
+desplegar este cambio — el sandbox de desarrollo no tiene los secretos reales
+(Supabase service role, Wompi, etc.), así que solo se le indicó agregar la
+línea `OPENAI_API_KEY=` a mano para no arriesgar borrar sus llaves de
+producción.
+
+Siguiente fase (diseñada, no construida): workflow de n8n para WhatsApp —
+nodo WhatsApp Trigger → nodo AI Agent (con las mismas tools, apuntando a
+`/api/ai/canchas/buscar`) → nodo de respuesta WhatsApp. Se retoma cuando
+WhatsApp Business Cloud API esté conectado.
+
 ## Reglas para quien continúe este proyecto
 
 - No reescribir el esquema de base de datos sin revisar `supabase/migrations/` primero

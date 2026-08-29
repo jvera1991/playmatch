@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { AiChatWidget } from "@/components/ai-chat-widget";
 
 export const metadata: Metadata = {
   title: "Playmatch: Reserva canchas en Medellín",
@@ -11,6 +12,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="es">
       <body className="min-h-screen bg-ink-50 font-sans text-ink-900 antialiased">
         {children}
+        <AiChatWidget />
       </body>
     </html>
   );
