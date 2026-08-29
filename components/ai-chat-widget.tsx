@@ -142,6 +142,7 @@ export function AiChatWidget() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Escribe qué cancha buscas..."
+              maxLength={800}
               className="flex-1 rounded-full border border-ink-200 bg-ink-50 px-3.5 py-2 text-sm outline-none focus:border-brand-500"
               disabled={loading}
             />

@@ -67,7 +67,11 @@ export async function buscarCanchas(args: BuscarCanchasArgs) {
   if (barrio) query = query.eq("venues.neighborhood", barrio);
   if (typeof precio_max === "number") query = query.lte("price_per_hour", precio_max);
 
-  const { data: courtsRaw, error } = await query.limit(40);
+  // Se limita a 20 candidatos (antes 40): cada uno dispara 3 consultas más
+  // (horarios/cierres/reservas) para calcular disponibilidad real, así que
+  // el fan-out por request ya es alto — sumado al rate limit del endpoint,
+  // esto acota el costo máximo de una sola búsqueda sobre Supabase.
+  const { data: courtsRaw, error } = await query.limit(20);
 
   if (error) {
     return { error: "Error consultando canchas" };

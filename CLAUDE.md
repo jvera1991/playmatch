@@ -334,6 +334,69 @@ nodo WhatsApp Trigger → nodo AI Agent (con las mismas tools, apuntando a
 `/api/ai/canchas/buscar`) → nodo de respuesta WhatsApp. Se retoma cuando
 WhatsApp Business Cloud API esté conectado.
 
+## Auditoría de seguridad del asistente de IA (29/08/2026)
+
+El usuario pidió revisar específicamente la capa de IA recién construida
+(`/api/ai/chat`, `/api/ai/canchas/buscar`, `lib/ai-tools.ts`,
+`components/ai-chat-widget.tsx`) con el skill **cyber-neo**, enfocado en que
+son endpoints públicos sin autenticación que gastan dinero real (OpenAI) y
+consultan Supabase. Hallazgos y arreglos:
+
+- **ALTO — corregido**: ninguno de los dos endpoints (`/api/ai/chat`,
+  `/api/ai/canchas/buscar`) tenía rate limit. Al ser públicos y sin sesión,
+  cualquiera podía escribir un script en bucle contra ellos y (a) generarle a
+  Playmatch una factura de OpenAI sin control, y (b) tumbar Supabase a punta
+  de requests. Se agregó `lib/rate-limit.ts` (ventana deslizante en memoria,
+  por IP vía `X-Forwarded-For`/`X-Real-IP`): 15 req/5min en `/api/ai/chat`,
+  30 req/5min en `/api/ai/canchas/buscar`. Responde `429` con header
+  `Retry-After`. **Limitación conocida**: es en memoria de un solo proceso —
+  funciona bien porque Playmatch corre en una sola instancia (ver sección de
+  despliegue), pero si en el futuro se escala a varias instancias detrás de
+  un balanceador, cada una cuenta aparte y hay que migrar a un store
+  compartido (Redis/Upstash). También se resetea en cada redeploy.
+- **MEDIO — corregido**: no había tope de tamaño en la entrada del chat — un
+  mensaje (o el array de mensajes) podía ser arbitrariamente grande,
+  inflando el costo de tokens de OpenAI por request. Se agregó
+  `MAX_MESSAGE_LENGTH = 800` caracteres por mensaje (se filtran los que se
+  pasan) y se mantuvo el tope ya existente de 20 mensajes de historial. El
+  input del widget (`ai-chat-widget.tsx`) ahora tiene `maxLength={800}` para
+  dar feedback inmediato en vez de que el mensaje se descarte en silencio.
+- **MEDIO — corregido**: `buscarCanchas()` no tenía tope de respuesta por
+  llamada al modelo — se agregó `max_completion_tokens: 400` a la llamada de
+  OpenAI para acotar el costo máximo de cada respuesta.
+- **MEDIO — corregido**: amplificación de consultas — una búsqueda sin
+  filtros calculaba disponibilidad para hasta 40 canchas, y cada una dispara
+  3 consultas más a Supabase (horarios/cierres/reservas) — hasta 120
+  consultas por un solo request HTTP. Se bajó el tope de candidatos de 40 a
+  20 (`lib/ai-tools.ts`), reduciendo el fan-out máximo a la mitad; combinado
+  con el rate limit, el costo total queda acotado.
+- **BAJO — corregido (defensa en profundidad)**: se agregó una regla
+  explícita al `SYSTEM_PROMPT` para que el modelo ignore cualquier
+  instrucción incrustada en un mensaje de usuario o en el resultado de una
+  herramienta que le pida cambiar sus reglas o revelar el system prompt
+  (mitigación básica de prompt injection). El impacto real era bajo — el
+  system prompt no contiene secretos y la única tool es de solo lectura —
+  pero es buena práctica no depender solo de eso.
+- **BAJO — corregido**: los errores del endpoint de chat se perdían en
+  silencio (`catch {}` sin loguear) — ahora se hace `console.error` del error
+  real antes de devolver el mensaje genérico al usuario, para poder
+  diagnosticar desde los logs de EasyPanel si algo vuelve a fallar (esto fue
+  justo lo que ocultó el bug del self-fetch que se corrigió en la sesión
+  anterior).
+- **Revisado, sin hallazgos**: no hay `dangerouslySetInnerHTML` ni
+  interpolación insegura en el widget (el texto de la IA se renderiza como
+  texto plano, los links se arman con JSX, no con HTML crudo); no hay CORS
+  abierto (`Access-Control-Allow-Origin` no se setea en ningún lado, así que
+  por defecto los endpoints solo aceptan same-origin); las herramientas de la
+  IA solo leen, nunca escriben (ver principio de diseño en la sección de
+  arriba); no hay secretos ni API keys expuestas al cliente (`OPENAI_API_KEY`
+  solo se lee server-side).
+- **PENDIENTE — decisión futura, no crítico ahora**: si el volumen de
+  visitas crece mucho, considerar mover el rate limit a un store compartido
+  y/o agregar un límite de gasto mensual configurable en la cuenta de OpenAI
+  (platform.openai.com → Billing → límites de uso) como última línea de
+  defensa contra abuso sostenido.
+
 ## Reglas para quien continúe este proyecto
 
 - No reescribir el esquema de base de datos sin revisar `supabase/migrations/` primero
