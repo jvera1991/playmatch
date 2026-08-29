@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import type { ChatCompletionMessageParam, ChatCompletionTool } from "openai/resources/chat/completions";
+import { buscarCanchas } from "@/lib/ai-tools";
 
 // Endpoint del asistente conversacional "PlayMatch AI" (widget web).
 //
 // Reglas de seguridad/diseño explícitas:
 // 1. La IA NUNCA tiene acceso directo a la base de datos ni crea reservas.
-//    Solo puede llamar a la herramienta "buscar_canchas", que pega contra
-//    /api/ai/canchas/buscar (el mismo cálculo de disponibilidad que usan
-//    las páginas públicas). Cualquier afirmación sobre horarios/precios
-//    DEBE venir de una llamada a la herramienta, nunca inventada.
+//    Solo puede llamar a la herramienta "buscar_canchas", que ejecuta
+//    buscarCanchas() de lib/ai-tools.ts DIRECTAMENTE (sin fetch de red) —
+//    el mismo cálculo de disponibilidad que usan las páginas públicas.
+//    Cualquier afirmación sobre horarios/precios DEBE venir de una llamada a
+//    la herramienta, nunca inventada.
 // 2. Para reservar, la IA siempre entrega el link real a /canchas/[id],
 //    donde el usuario completa la reserva por el flujo ya existente y
 //    validado (con su sesión, el candado de 15 min y la restricción
@@ -61,16 +63,6 @@ const tools: ChatCompletionTool[] = [
   },
 ];
 
-async function ejecutarBuscarCanchas(origin: string, args: Record<string, unknown>) {
-  const res = await fetch(`${origin}/api/ai/canchas/buscar`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(args),
-  });
-  if (!res.ok) return { error: "No se pudo consultar la disponibilidad en este momento." };
-  return res.json();
-}
-
 export async function POST(req: NextRequest) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
@@ -100,7 +92,6 @@ export async function POST(req: NextRequest) {
   const trimmed = incoming.slice(-MAX_MESSAGES);
 
   const openai = new OpenAI({ apiKey });
-  const origin = req.nextUrl.origin;
 
   const messages: ChatCompletionMessageParam[] = [
     { role: "system", content: SYSTEM_PROMPT },
@@ -136,7 +127,7 @@ export async function POST(req: NextRequest) {
 
         const result =
           call.function.name === "buscar_canchas"
-            ? await ejecutarBuscarCanchas(origin, args)
+            ? await buscarCanchas(args)
             : { error: "Herramienta desconocida" };
 
         messages.push({
@@ -150,7 +141,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       reply: "Estoy teniendo dificultades para responder ahora mismo. ¿Puedes intentar de nuevo?",
     });
-  } catch {
+  } catch (err) {
+    // Log real del error (antes se perdía en silencio) para poder diagnosticar
+    // desde los logs de EasyPanel si el asistente vuelve a fallar.
+    console.error("[/api/ai/chat] error:", err);
     return NextResponse.json(
       { error: "El asistente de IA no está disponible en este momento." },
       { status: 502 }
