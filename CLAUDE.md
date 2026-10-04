@@ -477,6 +477,101 @@ usuario):**
   por código pero no hay rutas de página con handlers de escritura expuestos
   fuera de las APIs explícitas (`/api/...`), que sí están protegidas.
 
+## Recuperación de contraseña ("olvidé mi contraseña") (04/10/2026)
+
+No existía ningún flujo para que un usuario (jugador, dueño o admin — todos
+usan la misma pantalla `/login`) recuperara su cuenta si olvidaba la
+contraseña. Se construyó usando el mecanismo nativo de Supabase Auth (no se
+guarda ni se puede leer la contraseña real — Supabase solo guarda el hash,
+ver conversación con el usuario sobre por qué una contraseña nunca se puede
+"dar" directamente):
+
+- `/login` ahora tiene un link "¿Olvidaste tu contraseña?" junto al campo de
+  contraseña.
+- `/recuperar` — formulario de un solo campo (correo). Llama a
+  `requestPasswordReset()` en `app/(auth)/actions.ts`, que usa
+  `supabase.auth.resetPasswordForEmail()` con `redirectTo` apuntando a
+  `/auth/callback?next=/actualizar-contrasena`.
+- `/recuperar/revisa-tu-correo` — mensaje genérico de confirmación.
+- `/actualizar-contrasena` — formulario para la contraseña nueva. Llama a
+  `updatePassword()`, que usa `supabase.auth.updateUser({ password })`
+  **sobre la sesión temporal** que Supabase crea automáticamente cuando el
+  usuario abre el link del correo (el mismo `app/auth/callback/route.ts` que
+  ya existía para la confirmación de registro se reutiliza tal cual — no se
+  tocó ese archivo).
+
+**Decisiones de seguridad explícitas:**
+- `requestPasswordReset()` **siempre** redirige al mismo "revisa tu correo",
+  exista o no esa cuenta, y aunque el rate limit la haya bloqueado — si
+  respondiera distinto en cada caso, el formulario se podría usar para
+  averiguar qué correos están registrados en Playmatch (enumeración de
+  usuarios).
+- Tiene su propio rate limit (`lib/rate-limit.ts`, reutilizado): 5
+  solicitudes cada 15 minutos por IP, para que no se pueda usar para
+  mandar spam de correos a una bandeja ajena en bucle.
+- `updatePassword()` depende de que haya sesión activa (la crea el link del
+  correo); si no la hay (link vencido o ya usado), redirige a `/login` con
+  un mensaje claro en vez de fallar feo.
+
+**Pendiente — ya no es solo "bonito tenerlo", ahora es urgente**: el SMTP
+por defecto de Supabase (~2-3 correos/hora) ahora lo comparten DOS flujos
+(confirmación de registro + recuperación de contraseña). Configurar un
+proveedor real (Resend, gratis hasta 3,000/mes) antes de que esto cause que
+gente no pueda entrar a su cuenta en un día con varios registros/reseteos a
+la vez.
+
+## Revisión de arquitectura, seguridad e infraestructura (04/10/2026)
+
+El usuario pidió una revisión completa en rol de "arquitecto experto" —
+código, seguridad, infraestructura, y qué tan lista está la app para
+crecer/escalar. Se usaron los advisors automáticos de seguridad y
+rendimiento de Supabase (`mcp__Supabase__get_advisors`) contra la base de
+datos real de producción, más revisión manual del Dockerfile/docker-compose/
+Nginx/GitHub Actions. Reporte completo entregado al usuario como
+`PLAYMATCH_REVISION_ARQUITECTURA_2026-10-04.md` — resumen de lo accionado:
+
+**Aplicado directo en producción (vía Supabase MCP, sin necesitar deploy de
+la app):** migración `20261004000001_perf_and_security_hardening_argus_followup.sql`
+— agrega 9 índices en columnas de llave foránea que no los tenían (afectan
+rendimiento a medida que crece el volumen de reservas/canchas, no se nota
+hoy) y revoca `EXECUTE` público sobre 4 funciones de trigger
+(`handle_new_user`, `protect_court_approval`,
+`protect_profile_privilege_fields`, `enforce_booking_cancellation`) que
+quedaban listadas como endpoints RPC públicos sin necesidad (Postgres ya
+impedía llamarlas directo por ser `returns trigger`, así que no eran
+explotables, pero es higiene correcta cerrar esa puerta). **Importante:**
+`current_role()` (también `security definer`) NO se tocó — se verificó que
+16 policies de RLS la llaman activamente bajo `anon`/`authenticated`;
+revocarle el `EXECUTE` habría roto el acceso a toda la app.
+
+**Pendiente, identificado y priorizado (no se tocó esta sesión por riesgo/alcance):**
+- Activar "leaked password protection" en Supabase Auth — acción manual del
+  usuario en el dashboard, 2 minutos, sin código.
+- 16 policies de RLS re-evalúan `auth.uid()` fila por fila en vez de
+  `(select auth.uid())` — optimización real pero requiere reescribir cada
+  policy con cuidado y probar que el control de acceso no cambie; queda para
+  una sesión dedicada a base de datos, no para hacer de pasada.
+- 5 tablas con policies de `SELECT` duplicadas (público + dueño) que podrían
+  consolidarse en una sola con `OR` — mismo caso, mismo momento.
+- Se encontró `.github/workflows/deploy.yml` — un mecanismo de despliegue
+  por SSH + docker-compose, *distinto* del que el usuario realmente usa
+  (EasyPanel manual). No se sabe si sigue activo (depende de si los
+  secretos de GitHub siguen configurados) — el usuario debe revisarlo y
+  desactivarlo si no se usa, para evitar un despliegue fantasma compitiendo
+  con EasyPanel.
+- Sin pruebas automatizadas en todo el repo — deuda técnica real, no
+  bloqueante hoy pero el primer punto que se vuelve riesgoso si el proyecto
+  crece.
+
+**Veredicto de arquitectura para crecer/escalar**: el diseño actual no
+encierra al proyecto — JWT sin estado de sesión en servidor, base de datos
+ya separada de la app (Supabase), `output: "standalone"` en Next.js — todo
+compatible con correr varias instancias detrás de un balanceador el día que
+haga falta. Los únicos bloqueos reales hoy son el rate limit del chat en
+memoria de un solo proceso (ya documentado) y la falta de una caché
+compartida — ninguno de los dos urgente con el tráfico actual, pero ambos
+quedan identificados para cuando el tráfico crezca de verdad.
+
 ## Reglas para quien continúe este proyecto
 
 - No reescribir el esquema de base de datos sin revisar `supabase/migrations/` primero

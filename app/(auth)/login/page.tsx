@@ -4,9 +4,9 @@ import { signIn } from "../actions";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; next?: string }>;
+  searchParams: Promise<{ error?: string; next?: string; reset?: string }>;
 }) {
-  const { error, next } = await searchParams;
+  const { error, next, reset } = await searchParams;
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-brand-glow px-4">
@@ -17,6 +17,12 @@ export default async function LoginPage({
           </span>
           <h1 className="mt-3 text-xl font-bold text-ink-900">Ingresar a Playmatch</h1>
         </div>
+
+        {reset === "ok" && (
+          <p className="mb-4 rounded-lg bg-green-50 p-3 text-sm text-green-700">
+            Tu contraseña se actualizó. Ya puedes ingresar con la nueva.
+          </p>
+        )}
 
         {error && (
           <p className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>
@@ -29,7 +35,12 @@ export default async function LoginPage({
             <input type="email" name="email" required autoComplete="email" className="input mt-1" />
           </div>
           <div>
-            <label className="text-sm font-medium text-ink-700">Contraseña</label>
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium text-ink-700">Contraseña</label>
+              <Link href="/recuperar" className="text-xs font-medium text-brand-700 hover:underline">
+                ¿Olvidaste tu contraseña?
+              </Link>
+            </div>
             <input
               type="password"
               name="password"
