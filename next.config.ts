@@ -32,6 +32,12 @@ const securityHeaders = [
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
+      // object-src 'none': bloquea <object>/<embed>/<applet> por completo (no
+      // los usamos para nada). Sin esto, un atacante que lograra inyectar HTML
+      // podría cargar un plugin (ej. Flash/PDF viewer) para ejecutar código,
+      // sorteando restricciones de script-src. Hallazgo de un scan externo
+      // (Argus, 01/10/2026) — costo cero porque la app no usa esos tags.
+      "object-src 'none'",
     ].join("; "),
   },
 ];

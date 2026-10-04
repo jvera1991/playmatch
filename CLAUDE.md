@@ -397,6 +397,86 @@ consultan Supabase. Hallazgos y arreglos:
   (platform.openai.com → Billing → límites de uso) como última línea de
   defensa contra abuso sostenido.
 
+## Pentest externo de caja negra con Argus (01/10/2026) + CRÍTICO hallado aparte
+
+Al corregir los hallazgos de Argus se revisó `npm audit` (no lo cubre un scan
+de caja negra) y apareció algo más grave que todo el reporte de Argus junto:
+**Next.js 16.3.1 (la versión pineada del proyecto) tiene una vulnerabilidad
+CRÍTICA de ejecución remota de código no autenticada** (RCE en servidores
+Windows, en la API de optimización de imágenes con AVIF, y en
+`next/og ImageResponse` — GHSA-p293-qw3h-jr36, GHSA-2xp9-vwfh-vxw4,
+GHSA-vcvr-r3jv-pc5j), parchada en **16.3.8**. Se actualizó
+`package.json`/`package-lock.json` a `next@16.3.8` (mismo major/minor, sin
+cambios de API) y se verificó `tsc --noEmit` + `npm run build` limpios tras
+el cambio. **Acción para el usuario**: después del próximo `git pull` en el
+VPS, el build de EasyPanel instalará automáticamente la 16.3.8 (ya está en
+`package.json`) — no requiere ninguna variable de entorno nueva.
+
+También quedó un hallazgo de severidad alta sin corregir, a propósito:
+`braces`/`chokidar`/`tailwindcss` (cadena de dependencias de desarrollo, no
+de runtime) tiene una DoS de agotamiento de pila con patrones glob muy
+anidados — el único fix disponible es saltar a `tailwindcss@4.x`, que el
+proyecto evita deliberadamente (ver sección de Stack, cambia el modelo de
+configuración). Riesgo real bajo porque es una dependencia de build, no
+expuesta a input de un atacante en producción. Revisar si en algún momento
+se decide migrar a Tailwind 4.
+
+Reporte de Argus en sí (hallazgos propios del scan externo):
+
+El usuario corrió "Argus" (herramienta de recon/pentest tipo Kali) contra la
+producción y pegó los dos reportes crudos (infraestructura + aplicación web).
+Triage hallazgo por hallazgo:
+
+**Reales, corregidos en esta sesión:**
+- **CSP sin `object-src`** (marcado ALTO por el analizador de CSP de Argus en
+  las 8 páginas rastreadas): sin esa directiva, un atacante que lograra
+  inyectar HTML podría cargar un `<object>`/`<embed>` para ejecutar código,
+  sorteando `script-src`. Se agregó `object-src 'none'` en `next.config.ts`
+  — costo cero porque la app no usa esos tags.
+- **Campos de login/registro sin `autocomplete`** (hallazgo menor del
+  "Autocomplete Vulnerability Checker"): se agregó `autoComplete="email"` /
+  `"current-password"` (login) y `"email"` / `"new-password"` / `"name"`
+  (registro) en `app/(auth)/login/page.tsx` y `app/(auth)/registro/page.tsx`.
+
+**Reales pero fuera del código (acción manual o aceptados conscientemente):**
+- `script-src` sigue con `'unsafe-inline'` — Next.js inyecta scripts/estilos
+  inline en el App Router y quitarlo sin nonces/hashes rompería la app;
+  migrar a nonces es un cambio más grande que requiere pruebas dedicadas, no
+  se hizo en esta pasada. Queda como mejora futura si se quiere endurecer más.
+- `npm audit` reporta 9 altas / 1 crítica tras un `npm install` limpio en
+  esta sesión — no se tocó en esta pasada (fuera del alcance del reporte de
+  Argus, que es caja negra externa); revisar con `npm audit` y aplicar
+  `npm audit fix` con cuidado (probar build después) en la próxima sesión.
+- `CRON_SECRET`/secretos reales en EasyPanel: sigue pendiente de que el
+  usuario confirme valores no-placeholder (ver auditoría de 28/08/2026).
+
+**Falsos positivos / artefactos de la herramienta (sin acción, explicado al
+usuario):**
+- "Cifrados TLS 1.3 débiles" (tabla larga con CAMELLIA/SEED/SRP/PSK/anon-DH
+  etc.): TLS 1.3 solo soporta 3 cifrados AEAD fijos
+  (`TLS_AES_128_GCM_SHA256`, `TLS_AES_256_GCM_SHA384`,
+  `TLS_CHACHA20_POLY1305_SHA256`) — esos nombres ni existen en TLS 1.3, es un
+  bug de etiquetado de Argus, no un hallazgo real.
+- Detección de CMS como "OpenCart"/"Joomla": la app es Next.js a medida, no
+  usa ningún CMS — falso positivo de coincidencia genérica de firmas.
+- "Hidden parameter discovery" (24 "hits"): Next.js responde con una página
+  de tamaño similar a cualquier query string arbitrario; no implica que el
+  valor se refleje sin escapar en el HTML. No se verificó la respuesta cruda
+  pero es el patrón típico de falso positivo de esta clase de scanner —
+  revisar solo si se quiere confirmar al 100%.
+- Fuzzing de subdominios (26 probados, todos 404 legítimos): no hay
+  exposición real, los subdominios simplemente no existen.
+- Reverse-IP mostrando otro dominio no relacionado en la misma IP: esperado
+  en hosting compartido (EasyPanel/VPS), no es una mala configuración de
+  Playmatch.
+- Enumerador de métodos HTTP marcando PUT/DELETE/PATCH/OPTIONS como
+  "soportados" en casi todas las rutas: las páginas de Next.js (App Router)
+  solo implementan `GET` — lo más probable es que el servidor/framework
+  responda genéricamente (ej. 405) y la herramienta lo cuente como "método
+  disponible" sin verificar el código de estado real. No se confirmó código
+  por código pero no hay rutas de página con handlers de escritura expuestos
+  fuera de las APIs explícitas (`/api/...`), que sí están protegidas.
+
 ## Reglas para quien continúe este proyecto
 
 - No reescribir el esquema de base de datos sin revisar `supabase/migrations/` primero

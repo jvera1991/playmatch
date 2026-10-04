@@ -25,15 +25,22 @@ export default async function RegistroPage({
         <form action={signUp} className="space-y-4">
           <div>
             <label className="text-sm font-medium text-ink-700">Nombre completo</label>
-            <input name="full_name" required className="input mt-1" />
+            <input name="full_name" required autoComplete="name" className="input mt-1" />
           </div>
           <div>
             <label className="text-sm font-medium text-ink-700">Correo</label>
-            <input type="email" name="email" required className="input mt-1" />
+            <input type="email" name="email" required autoComplete="email" className="input mt-1" />
           </div>
           <div>
             <label className="text-sm font-medium text-ink-700">Contraseña</label>
-            <input type="password" name="password" required minLength={6} className="input mt-1" />
+            <input
+              type="password"
+              name="password"
+              required
+              minLength={6}
+              autoComplete="new-password"
+              className="input mt-1"
+            />
           </div>
 
           <fieldset className="rounded-xl border border-ink-200 p-3">

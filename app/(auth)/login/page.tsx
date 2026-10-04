@@ -26,11 +26,17 @@ export default async function LoginPage({
           <input type="hidden" name="next" value={next || "/"} />
           <div>
             <label className="text-sm font-medium text-ink-700">Correo</label>
-            <input type="email" name="email" required className="input mt-1" />
+            <input type="email" name="email" required autoComplete="email" className="input mt-1" />
           </div>
           <div>
             <label className="text-sm font-medium text-ink-700">Contraseña</label>
-            <input type="password" name="password" required className="input mt-1" />
+            <input
+              type="password"
+              name="password"
+              required
+              autoComplete="current-password"
+              className="input mt-1"
+            />
           </div>
           <button className="btn-primary w-full">Ingresar</button>
         </form>
