@@ -1,23 +1,16 @@
 import { updatePassword } from "../actions";
-import { createClient } from "@/lib/supabase/server";
 
+// Para cuando esta página se muestra, app/auth/recuperar-callback/route.ts ya
+// intercambió el código del correo por una sesión real (ver ese archivo). Si
+// alguien llega aquí sin sesión (por ejemplo, entrando directo a la URL sin
+// pasar por el link del correo), updatePassword() en actions.ts lo detecta y
+// redirige a /login con un mensaje claro.
 export default async function ActualizarContrasenaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; code?: string }>;
+  searchParams: Promise<{ error?: string }>;
 }) {
-  const { error, code } = await searchParams;
-
-  // El link del correo de recuperación llega aquí con "?code=..." en la URL
-  // (Supabase lo agrega solo). Esta página misma intercambia ese código por
-  // una sesión temporal — antes eso pasaba en /auth/callback con un parámetro
-  // "next", pero Supabase no siempre lo respetaba en producción (llegaba al
-  // dominio correcto pero perdía el "next" y mandaba al usuario al home). Al
-  // hacerlo aquí mismo evitamos depender de ese segundo parámetro.
-  if (code) {
-    const supabase = await createClient();
-    await supabase.auth.exchangeCodeForSession(code);
-  }
+  const { error } = await searchParams;
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-brand-glow px-4">

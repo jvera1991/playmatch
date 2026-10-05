@@ -90,16 +90,13 @@ export async function requestPasswordReset(formData: FormData) {
   // limit.
   if (email && rate.allowed) {
     const supabase = await createClient();
-    // Apunta DIRECTO a /actualizar-contrasena (no pasa por /auth/callback con
-    // un "?next=..."). Se probó en producción que Supabase a veces no
-    // respeta un segundo parámetro de query dentro del redirectTo — llegaba
-    // al dominio correcto pero perdía el "next" por el camino y terminaba en
-    // el home. Evitamos ese problema por completo quitando el parámetro: la
-    // propia página /actualizar-contrasena ahora hace el intercambio del
-    // código (ver ese archivo), así no depende de que sobreviva nada en la
-    // URL aparte del "code" que Supabase agrega automáticamente.
+    // Apunta a la ruta dedicada /auth/recuperar-callback (Route Handler, no
+    // una página normal) — ahí se intercambia el código por una sesión real
+    // ANTES de llegar al formulario de nueva contraseña. Ver el comentario
+    // completo en app/auth/recuperar-callback/route.ts sobre por qué tiene
+    // que ser así y no un "?next=..." sobre /auth/callback.
     await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/actualizar-contrasena`,
+      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/recuperar-callback`,
     });
   }
 
