@@ -1,11 +1,23 @@
 import { updatePassword } from "../actions";
+import { createClient } from "@/lib/supabase/server";
 
 export default async function ActualizarContrasenaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; code?: string }>;
 }) {
-  const { error } = await searchParams;
+  const { error, code } = await searchParams;
+
+  // El link del correo de recuperación llega aquí con "?code=..." en la URL
+  // (Supabase lo agrega solo). Esta página misma intercambia ese código por
+  // una sesión temporal — antes eso pasaba en /auth/callback con un parámetro
+  // "next", pero Supabase no siempre lo respetaba en producción (llegaba al
+  // dominio correcto pero perdía el "next" y mandaba al usuario al home). Al
+  // hacerlo aquí mismo evitamos depender de ese segundo parámetro.
+  if (code) {
+    const supabase = await createClient();
+    await supabase.auth.exchangeCodeForSession(code);
+  }
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-brand-glow px-4">
