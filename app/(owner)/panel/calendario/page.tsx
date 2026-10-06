@@ -4,6 +4,7 @@ import { requireOwner } from "@/lib/guards";
 import { OWNER_LINKS as LINKS } from "@/lib/owner-links";
 import { CalendarEventChip, type CalendarEvent } from "@/components/calendar-event-chip";
 import { ManualBookingDialog } from "@/components/owner/manual-booking-dialog";
+import { BlockDialog } from "@/components/owner/block-dialog";
 import { loadOwnerData } from "@/lib/owner-data";
 import { loadCrm } from "@/lib/owner-crm";
 
@@ -111,7 +112,7 @@ export default async function CalendarioPage({
   // días/horas no están disponibles para reservar.
   const { data: closures } = await supabase
     .from("court_closures")
-    .select("id, start_at, end_at, reason, courts(name, venues(name, address))")
+    .select("id, start_at, end_at, reason, category, series_id, courts(name, venues(name, address))")
     .in("court_id", courtIds.length ? courtIds : ["00000000-0000-0000-0000-000000000000"])
     .lt("start_at", rangoFin.toISOString())
     .gt("end_at", rangoInicio.toISOString());
@@ -181,6 +182,9 @@ export default async function CalendarioPage({
         fechaInicioLarga: bogotaFechaLarga(c.start_at),
         fechaFinLarga: bogotaFechaLarga(c.end_at),
         cubreVariosDias: inicioBloqueo !== finBloqueo,
+        closureId: c.id,
+        category: (c.category as string | null) ?? null,
+        seriesId: (c.series_id as string | null) ?? null,
       });
       const next = new Date(cursor + "T12:00:00Z");
       next.setUTCDate(next.getUTCDate() + 1);
@@ -217,6 +221,7 @@ export default async function CalendarioPage({
           {MESES[month]} {year}
         </h1>
         <div className="flex flex-wrap gap-2">
+          <BlockDialog courts={courtOptions.map((c) => ({ id: c.id, name: c.name }))} />
           <ManualBookingDialog courts={courtOptions} customers={customerOptions} autoOpen={nueva === "1"} />
           <Link href={`/panel/calendario?mes=${fmtMes(mesAnterior)}`} className="btn-secondary !px-3 !py-2 text-sm">
             ← Anterior

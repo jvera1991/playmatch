@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { removeBlock } from "@/app/(owner)/panel/block-actions";
+import { BLOCK_CATEGORIES } from "@/components/owner/block-dialog";
 
 type ReservaEvento = {
   tipo: "reserva";
@@ -32,7 +34,56 @@ type BloqueoEvento = {
   fechaInicioLarga: string;
   fechaFinLarga: string;
   cubreVariosDias: boolean;
+  // Bloqueo desde el calendario (06/10/2026): tipo y serie semanal
+  closureId?: string;
+  category?: string | null;
+  seriesId?: string | null;
 };
+
+const CATEGORY_LABEL: Record<string, string> = Object.fromEntries(BLOCK_CATEGORIES.map((c) => [c.k, c.label]));
+// Chip rayado para que un bloqueo no se confunda con una reserva
+const BLOCK_STRIPES = {
+  backgroundImage: "repeating-linear-gradient(135deg, rgb(229 231 235) 0 6px, rgb(243 244 246) 6px 12px)",
+};
+
+function RemoveBlockButtons({ closureId, isSeries }: { closureId: string; isSeries: boolean }) {
+  const [ask, setAsk] = useState<null | "one" | "following">(null);
+  if (ask) {
+    return (
+      <form action={removeBlock} className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+        <input type="hidden" name="closure_id" value={closureId} />
+        <input type="hidden" name="scope" value={ask} />
+        <p>{ask === "one" ? "¿Quitar el bloqueo de este día?" : "¿Quitar este día y todos los siguientes de la serie?"}</p>
+        <div className="mt-2 flex gap-2">
+          <button className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-700">Sí, quitar</button>
+          <button type="button" onClick={() => setAsk(null)} className="rounded-lg px-3 py-1.5 text-xs font-bold text-red-700 hover:bg-red-100">
+            No
+          </button>
+        </div>
+      </form>
+    );
+  }
+  return (
+    <div className="mt-4 flex flex-wrap gap-2">
+      <button
+        type="button"
+        onClick={() => setAsk("one")}
+        className="rounded-xl border border-red-200 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-50"
+      >
+        {isSeries ? "Quitar solo este día" : "Quitar bloqueo"}
+      </button>
+      {isSeries && (
+        <button
+          type="button"
+          onClick={() => setAsk("following")}
+          className="rounded-xl border border-red-200 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-50"
+        >
+          Quitar este y los siguientes
+        </button>
+      )}
+    </div>
+  );
+}
 
 export type CalendarEvent = ReservaEvento | BloqueoEvento;
 
@@ -76,10 +127,14 @@ export function CalendarEventChip({ event }: { event: CalendarEvent }) {
         onMouseLeave={() => setHovered(false)}
         onFocus={() => setHovered(true)}
         onBlur={() => setHovered(false)}
+        style={event.tipo === "bloqueo" ? BLOCK_STRIPES : undefined}
         className={`w-full truncate rounded border px-1.5 py-0.5 text-left text-[10px] font-medium transition-transform hover:-translate-y-px hover:shadow-sm ${chipClass}`}
       >
         {event.tipo === "bloqueo" ? "🔒 " : ""}
-        {event.horaInicio} · {event.courtName}
+        {event.horaInicio} ·{" "}
+        {event.tipo === "bloqueo" && event.category
+          ? `${CATEGORY_LABEL[event.category]?.replace(/^\S+ /, "") ?? ""} · ${event.courtName}`
+          : event.courtName}
       </button>
 
       {/* Vista previa al pasar el mouse — se oculta apenas se abre el detalle */}
@@ -102,7 +157,10 @@ export function CalendarEventChip({ event }: { event: CalendarEvent }) {
             </>
           ) : (
             <>
-              <p className="text-xs font-semibold text-ink-900">🔒 {event.courtName}</p>
+              <p className="text-xs font-semibold text-ink-900">
+                🔒 {event.category ? `${CATEGORY_LABEL[event.category]} · ` : ""}
+                {event.courtName}
+              </p>
               <p className="mt-0.5 text-[11px] text-ink-500">
                 {event.horaInicio} – {event.horaFin}
               </p>
@@ -162,8 +220,13 @@ export function CalendarEventChip({ event }: { event: CalendarEvent }) {
               </>
             ) : (
               <>
-                <p className="text-xs font-medium text-ink-400">Cancha bloqueada por ti</p>
-                <h3 className="text-lg font-bold text-ink-900">🔒 {event.courtName}</h3>
+                <p className="text-xs font-medium text-ink-400">
+                  Cancha bloqueada por ti{event.seriesId ? " · se repite cada semana" : ""}
+                </p>
+                <h3 className="text-lg font-bold text-ink-900">
+                  🔒 {event.category ? CATEGORY_LABEL[event.category] : event.courtName}
+                </h3>
+                {event.category && <p className="text-sm text-ink-500">{event.courtName}</p>}
 
                 <div className="mt-4 space-y-2.5 text-sm">
                   <p className="flex items-start gap-2 text-ink-700">
@@ -187,6 +250,7 @@ export function CalendarEventChip({ event }: { event: CalendarEvent }) {
                     </p>
                   )}
                 </div>
+                {event.closureId && <RemoveBlockButtons closureId={event.closureId} isSeries={!!event.seriesId} />}
               </>
             )}
 

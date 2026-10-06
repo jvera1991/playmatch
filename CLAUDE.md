@@ -677,6 +677,20 @@ Solo se AGREGÓ (pedido explícito del usuario: "agrega, no modifiques").
   lo abre). Gráficos en SVG propio, sin librerías.
 - **Bug corregido**: "Por cobrar" del resumen contaba reservas futuras.
 
+## Bloquear horario desde el calendario (06/10/2026)
+
+Botón "🔒 Bloquear horario" en `/panel/calendario` (`components/owner/block-dialog.tsx`
++ `app/(owner)/panel/block-actions.ts`): motivo (escuela, evento, torneo,
+mantenimiento, otro), nota, una vez o cada semana (días + rango, máx. 6 meses).
+Cada franja es una fila normal de `court_closures` (la respeta toda la app sin
+cambios); migración `20261006000003` solo agrega `category` y `series_id` (una
+serie por cancha). Las franjas que chocan con reservas vigentes se SALTAN (se
+avisa antes; nunca se cancela a nadie). Al hacer clic en un bloqueo: "Quitar
+solo este día" / "Quitar este y los siguientes". La RLS `closures_owner_write`
+limita crear/borrar al dueño. Ojo: `reason` es de lectura pública (policy
+`closures_public_read`), no poner datos personales en la nota. El bloqueo
+desde Mis canchas → Horarios sigue igual.
+
 ## Reglas para quien continúe este proyecto
 
 - No reescribir el esquema de base de datos sin revisar `supabase/migrations/` primero
