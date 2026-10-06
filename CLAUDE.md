@@ -654,6 +654,29 @@ el repo de GitHub es PÚBLICO (considerar hacerlo privado); la llave de Google
 Maps del navegador quedó en el historial público de git → borrarla en Google
 Cloud ya que no se usa.
 
+## Panel del dueño: KPIs + mini-CRM + reservas manuales (06/10/2026)
+
+Solo se AGREGÓ (pedido explícito del usuario: "agrega, no modifiques").
+- **BD** (migración `20261006000002_owner_crm_and_manual_bookings.sql`, ya
+  aplicada): tabla `owner_customers` (RLS: solo su dueño); `bookings.source`
+  (`online`|`manual`), `customer_id`, `payment_method`. El trigger
+  `protect_booking_integrity` tiene rama manual: solo el dueño de la cancha,
+  `player_id = auth.uid()`, cliente propio, ≤12h, inicio ≥ hace 7 días;
+  queda `confirmed` con comisión 0 y payout = total. El anti-traslape aplica
+  igual. Policy `profiles_owner_reads_customers`: el dueño ve el perfil de
+  quien reservó sus canchas.
+- **Reglas**: las reservas manuales NO cuentan para pagos/liquidaciones
+  (`.eq("source","online")` en `/panel/pagos`, `/admin/pagos`, "Por cobrar"
+  del resumen), ni en "Mis reservas" del jugador, ni en el cron de
+  recordatorios. Cualquier consulta nueva de dinero debe filtrar igual.
+- **Código**: `lib/owner-metrics.ts` (KPIs, funciones puras), `lib/owner-data.ts`,
+  `lib/owner-crm.ts`, `components/owner/*`, `app/(owner)/panel/crm-actions.ts`,
+  `/panel/clientes` y `/panel/clientes/[key]` (key `c-<owner_customer>` o
+  `p-<profile>`). Resumen: sección "Indicadores del negocio" (periodo
+  `?periodo=7|30|90|mes`). Calendario: botón "+ Reserva manual" (`?nueva=1`
+  lo abre). Gráficos en SVG propio, sin librerías.
+- **Bug corregido**: "Por cobrar" del resumen contaba reservas futuras.
+
 ## Reglas para quien continúe este proyecto
 
 - No reescribir el esquema de base de datos sin revisar `supabase/migrations/` primero

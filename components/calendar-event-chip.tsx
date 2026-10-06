@@ -15,6 +15,9 @@ type ReservaEvento = {
   horaFin: string;
   fechaLarga: string;
   totalPrice: number;
+  // Reserva manual registrada por el dueño (06/10/2026)
+  manual?: boolean;
+  paymentMethod?: string | null;
 };
 
 type BloqueoEvento = {
@@ -38,6 +41,12 @@ const STATUS_STYLE: Record<string, string> = {
   pending_payment: "border-amber-200 bg-amber-100 text-amber-800",
   completed: "border-ink-200 bg-ink-100 text-ink-600",
 };
+const MANUAL_STYLE = "border-violet-200 bg-violet-100 text-violet-800";
+const PAGO_LABEL: Record<string, string> = {
+  efectivo: "Efectivo",
+  transferencia: "Transferencia",
+  pendiente: "Pago pendiente",
+};
 const STATUS_LABEL: Record<string, string> = {
   confirmed: "Confirmada",
   pending_payment: "Esperando pago",
@@ -54,7 +63,9 @@ export function CalendarEventChip({ event }: { event: CalendarEvent }) {
   const chipClass =
     event.tipo === "bloqueo"
       ? "border-ink-300 bg-ink-200/70 text-ink-700"
-      : STATUS_STYLE[event.status] ?? "bg-ink-100 text-ink-600";
+      : event.manual
+        ? MANUAL_STYLE
+        : STATUS_STYLE[event.status] ?? "bg-ink-100 text-ink-600";
 
   return (
     <div className="relative">
@@ -82,7 +93,11 @@ export function CalendarEventChip({ event }: { event: CalendarEvent }) {
               </p>
               <p className="mt-0.5 text-[11px] text-ink-500">
                 {event.playerName ?? "Jugador"} ·{" "}
-                <span className={`badge ${STATUS_STYLE[event.status]}`}>{STATUS_LABEL[event.status]}</span>
+                {event.manual ? (
+                  <span className={`badge ${MANUAL_STYLE}`}>Manual</span>
+                ) : (
+                  <span className={`badge ${STATUS_STYLE[event.status]}`}>{STATUS_LABEL[event.status]}</span>
+                )}
               </p>
             </>
           ) : (
@@ -111,10 +126,16 @@ export function CalendarEventChip({ event }: { event: CalendarEvent }) {
               <>
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <p className="text-xs font-medium text-ink-400">Reserva</p>
+                    <p className="text-xs font-medium text-ink-400">{event.manual ? "Reserva manual" : "Reserva"}</p>
                     <h3 className="text-lg font-bold text-ink-900">{event.courtName}</h3>
                   </div>
-                  <span className={`badge ${STATUS_STYLE[event.status]}`}>{STATUS_LABEL[event.status]}</span>
+                  {event.manual ? (
+                    <span className={`badge ${MANUAL_STYLE}`}>
+                      {PAGO_LABEL[event.paymentMethod ?? ""] ?? "Manual"}
+                    </span>
+                  ) : (
+                    <span className={`badge ${STATUS_STYLE[event.status]}`}>{STATUS_LABEL[event.status]}</span>
+                  )}
                 </div>
 
                 <div className="mt-4 space-y-2.5 text-sm">

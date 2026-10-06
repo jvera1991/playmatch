@@ -33,6 +33,9 @@ export default async function MisReservasPage() {
       "id, start_at, end_at, status, total_price, cancellation_reason, courts(name, venues(name, address))"
     )
     .eq("player_id", user.id)
+    // Las reservas manuales quedan a nombre del dueño que las registra; no
+    // son reservas suyas como jugador.
+    .eq("source", "online")
     .order("start_at", { ascending: false });
 
   async function cancelarReserva(bookingId: string, motivo: string) {

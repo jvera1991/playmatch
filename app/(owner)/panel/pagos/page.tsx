@@ -22,6 +22,7 @@ export default async function PagosPage() {
     .select("id, start_at, owner_payout_amount, courts(name)")
     .in("court_id", courtIds.length ? courtIds : ["00000000-0000-0000-0000-000000000000"])
     .eq("status", "confirmed")
+    .eq("source", "online") // las manuales las cobró el dueño directamente
     .lt("start_at", new Date().toISOString())
     .order("start_at", { ascending: false });
 

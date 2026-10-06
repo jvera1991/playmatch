@@ -35,7 +35,7 @@ export default async function ReservasPage({
   let query = supabase
     .from("bookings")
     .select(
-      "id, start_at, end_at, status, total_price, owner_payout_amount, cancellation_reason, courts(name), profiles:player_id(full_name, whatsapp_number, phone)"
+      "id, start_at, end_at, status, total_price, owner_payout_amount, cancellation_reason, source, courts(name), profiles:player_id(full_name, whatsapp_number, phone), owner_customers:customer_id(full_name, phone)"
     )
     .in("court_id", courtIds.length ? courtIds : ["00000000-0000-0000-0000-000000000000"])
     .order("start_at", { ascending: false })
@@ -81,7 +81,12 @@ export default async function ReservasPage({
           </thead>
           <tbody className="divide-y divide-ink-100">
             {bookings?.map((b) => {
-              const player = b.profiles as unknown as { full_name: string; whatsapp_number: string | null };
+              // Reserva manual: se muestra el cliente del CRM, no el dueño que la registró.
+              const manual = b.owner_customers as unknown as { full_name: string; phone: string | null } | null;
+              const player =
+                b.source === "manual"
+                  ? { full_name: `${manual?.full_name ?? "Cliente"} (manual)`, whatsapp_number: manual?.phone ?? null }
+                  : (b.profiles as unknown as { full_name: string; whatsapp_number: string | null });
               return (
                 <tr key={b.id} className="hover:bg-ink-50/50">
                   <td className="px-4 py-3 font-medium text-ink-800">

@@ -35,6 +35,7 @@ export async function GET(req: NextRequest) {
       "id, start_at, reminder_sent_at, courts(name, venues(name, address)), profiles:player_id(whatsapp_number, full_name)"
     )
     .eq("status", "confirmed")
+    .eq("source", "online") // el cliente de una reserva manual no tiene cuenta
     .is("reminder_sent_at", null)
     .gte("start_at", in1h.toISOString())
     .lt("start_at", in1h5.toISOString());

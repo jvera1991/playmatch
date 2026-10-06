@@ -3,6 +3,9 @@ import { DashboardShell } from "@/components/dashboard-shell";
 import { requireOwner } from "@/lib/guards";
 import { OWNER_LINKS as LINKS } from "@/lib/owner-links";
 import { CalendarEventChip, type CalendarEvent } from "@/components/calendar-event-chip";
+import { ManualBookingDialog } from "@/components/owner/manual-booking-dialog";
+import { loadOwnerData } from "@/lib/owner-data";
+import { loadCrm } from "@/lib/owner-crm";
 
 const DIAS_SEMANA = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 const DIAS_SEMANA_LARGO = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
@@ -47,9 +50,9 @@ function bogotaFechaLarga(iso: string) {
 export default async function CalendarioPage({
   searchParams,
 }: {
-  searchParams: Promise<{ mes?: string }>;
+  searchParams: Promise<{ mes?: string; nueva?: string }>;
 }) {
-  const { mes } = await searchParams;
+  const { mes, nueva } = await searchParams;
   const { supabase, user } = await requireOwner("/panel/calendario");
 
   const hoy = new Date();
@@ -94,7 +97,7 @@ export default async function CalendarioPage({
   const { data: bookings } = await supabase
     .from("bookings")
     .select(
-      "id, start_at, end_at, status, total_price, courts(name, venues(name, address)), profiles:player_id(full_name, whatsapp_number, phone)"
+      "id, start_at, end_at, status, total_price, source, payment_method, courts(name, venues(name, address)), profiles:player_id(full_name, whatsapp_number, phone), owner_customers:customer_id(full_name, phone)"
     )
     .in("court_id", courtIds.length ? courtIds : ["00000000-0000-0000-0000-000000000000"])
     .in("status", ["confirmed", "pending_payment", "completed"])
@@ -128,6 +131,9 @@ export default async function CalendarioPage({
       whatsapp_number: string | null;
       phone: string | null;
     };
+    // Reserva manual: el cliente es el del CRM del dueño, no el jugador.
+    const manualCustomer = b.owner_customers as unknown as { full_name: string; phone: string | null } | null;
+    const isManual = b.source === "manual";
     if (!porDia.has(key)) porDia.set(key, []);
     porDia.get(key)!.push({
       tipo: "reserva",
@@ -137,8 +143,10 @@ export default async function CalendarioPage({
       courtName: court?.name ?? "",
       venueName: court?.venues?.name ?? null,
       venueAddress: court?.venues?.address ?? null,
-      playerName: player?.full_name ?? null,
-      playerPhone: player?.whatsapp_number ?? player?.phone ?? null,
+      playerName: isManual ? manualCustomer?.full_name ?? null : player?.full_name ?? null,
+      playerPhone: isManual ? manualCustomer?.phone ?? null : player?.whatsapp_number ?? player?.phone ?? null,
+      manual: isManual,
+      paymentMethod: (b.payment_method as string | null) ?? null,
       horaInicio: bogotaTime(b.start_at),
       horaFin: bogotaTime(b.end_at),
       fechaLarga: bogotaFechaLarga(b.start_at),
@@ -189,6 +197,14 @@ export default async function CalendarioPage({
     });
   }
 
+  // Datos para "+ Reserva manual": canchas con precio y clientes del CRM.
+  const ownerData = await loadOwnerData(supabase, user.id, new Date(Date.now() - 365 * 86_400_000));
+  const { customers: crmCustomers } = await loadCrm(supabase, user.id, ownerData.bookings);
+  const courtOptions = ownerData.courts.map((c) => ({ id: c.id, name: c.name, price_per_hour: Number(c.price_per_hour) }));
+  const customerOptions = crmCustomers
+    .map((c) => ({ key: c.key, name: c.name, phone: c.phone }))
+    .sort((a, b) => a.name.localeCompare(b.name, "es"));
+
   const mesAnterior = new Date(Date.UTC(year, month - 1, 1));
   const mesSiguiente = new Date(Date.UTC(year, month + 1, 1));
   const fmtMes = (d: Date) =>
@@ -200,7 +216,8 @@ export default async function CalendarioPage({
         <h1 className="text-2xl font-bold text-ink-900">
           {MESES[month]} {year}
         </h1>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <ManualBookingDialog courts={courtOptions} customers={customerOptions} autoOpen={nueva === "1"} />
           <Link href={`/panel/calendario?mes=${fmtMes(mesAnterior)}`} className="btn-secondary !px-3 !py-2 text-sm">
             ← Anterior
           </Link>
@@ -274,6 +291,9 @@ export default async function CalendarioPage({
         </span>
         <span className="flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-full bg-ink-300" /> 🔒 Bloqueado por ti
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-full bg-violet-500" /> Manual
         </span>
       </div>
     </DashboardShell>

@@ -5,5 +5,6 @@ export const OWNER_LINKS = [
   { href: "/panel/canchas", label: "Mis canchas", icon: "🏟️" },
   { href: "/panel/calendario", label: "Calendario", icon: "🗓️" },
   { href: "/panel/reservas", label: "Reservas", icon: "📅" },
+  { href: "/panel/clientes", label: "Clientes", icon: "👥" },
   { href: "/panel/pagos", label: "Pagos", icon: "💰" },
 ];

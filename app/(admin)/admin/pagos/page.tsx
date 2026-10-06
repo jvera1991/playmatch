@@ -40,6 +40,7 @@ export default async function AdminPagosPage() {
     .from("bookings")
     .select("owner_payout_amount, start_at, courts(venues(owner_id, profiles:owner_id(full_name)))")
     .eq("status", "confirmed")
+    .eq("source", "online") // las reservas manuales no pasan por Playmatch
     .lt("start_at", new Date().toISOString());
 
   const porDueno = new Map<string, PendingRow>();
