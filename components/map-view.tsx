@@ -41,7 +41,7 @@ export interface MapCourt {
 // Centro de Medellín, usado cuando no hay canchas geolocalizadas todavía.
 const MEDELLIN_CENTER: [number, number] = [6.2518, -75.5636];
 
-function buildPopup(court: MapCourt): HTMLElement {
+function buildPopup(court: MapCourt, withLink = true): HTMLElement {
   const box = document.createElement("div");
   box.style.minWidth = "170px";
   box.style.fontFamily = "inherit";
@@ -63,11 +63,23 @@ function buildPopup(court: MapCourt): HTMLElement {
   link.style.cssText = "color:#08a06a;font-size:13px;font-weight:600";
   link.textContent = "Ver cancha →";
 
-  box.append(title, meta, price, link);
+  box.append(title, meta, price);
+  if (withLink) box.append(link);
   return box;
 }
 
-export function MapView({ courts }: { courts: MapCourt[] }) {
+export function MapView({
+  courts,
+  heightClass = "h-[70vh]",
+  zoom = 12,
+  showPopupLink = true,
+}: {
+  courts: MapCourt[];
+  heightClass?: string;
+  zoom?: number;
+  // En la página de una cancha no tiene sentido el link "Ver cancha".
+  showPopupLink?: boolean;
+}) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
 
@@ -82,7 +94,7 @@ export function MapView({ courts }: { courts: MapCourt[] }) {
 
         map = L.map(mapRef.current, { scrollWheelZoom: true }).setView(
           courts.length ? [courts[0].lat, courts[0].lng] : MEDELLIN_CENTER,
-          12
+          zoom
         );
 
         L.tileLayer(TILE_URL, { maxZoom: 19, attribution: TILE_ATTRIBUTION }).addTo(map);
@@ -99,7 +111,7 @@ export function MapView({ courts }: { courts: MapCourt[] }) {
           });
 
           L.marker([court.lat, court.lng], { icon, title: court.name })
-            .bindPopup(() => buildPopup(court))
+            .bindPopup(() => buildPopup(court, showPopupLink))
             .addTo(map);
           bounds.extend([court.lat, court.lng]);
         }
@@ -115,7 +127,7 @@ export function MapView({ courts }: { courts: MapCourt[] }) {
       cancelled = true;
       map?.remove();
     };
-  }, [courts]);
+  }, [courts, zoom, showPopupLink]);
 
   if (status === "error") {
     return (
@@ -133,7 +145,7 @@ export function MapView({ courts }: { courts: MapCourt[] }) {
     <div className="relative">
       <div
         ref={mapRef}
-        className="z-0 h-[70vh] w-full overflow-hidden rounded-2xl border border-ink-100 shadow-soft"
+        className={`z-0 ${heightClass} w-full overflow-hidden rounded-2xl border border-ink-100 shadow-soft`}
       />
       {status === "loading" && (
         <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-white/70">

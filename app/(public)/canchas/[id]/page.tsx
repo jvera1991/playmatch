@@ -5,6 +5,7 @@ import { Navbar } from "@/components/navbar";
 import { notFound } from "next/navigation";
 import { Umbrella } from "@phosphor-icons/react/ssr";
 import { SportIcon, SPORT_LABEL } from "@/components/sport-icon";
+import { MapView } from "@/components/map-view";
 
 function hoyBogota() {
   return new Date().toLocaleDateString("en-CA", { timeZone: "America/Bogota" });
@@ -152,13 +153,40 @@ export default async function CanchaDetallePage({
 
         {venue?.lat != null && venue?.lng != null && (
           <div className="card mt-5 animate-fade-up overflow-hidden p-0" style={{ animationDelay: "120ms" }}>
-            <h2 className="p-4 pb-0 text-sm font-semibold text-ink-800">Ubicación</h2>
-            <iframe
-              title={`Mapa de ${court.name}`}
-              className="mt-3 h-64 w-full border-0"
-              loading="lazy"
-              src={`https://www.google.com/maps?q=${venue.lat},${venue.lng}&z=15&output=embed`}
-            />
+            <div className="flex items-center justify-between gap-3 p-4 pb-0">
+              <h2 className="text-sm font-semibold text-ink-800">Ubicación</h2>
+              {/* Abre la app de mapas del celular (Google Maps) con la ruta.
+                  Es un link normal: no carga nada de Google dentro del sitio. */}
+              <a
+                href={`https://www.google.com/maps/dir/?api=1&destination=${Number(venue.lat)},${Number(venue.lng)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-medium text-brand-700 hover:underline"
+              >
+                Cómo llegar →
+              </a>
+            </div>
+            {/* Antes era un iframe de Google Maps, que el CSP del sitio
+                bloquea (frame-src). Ahora usa el mismo mapa Leaflet +
+                OpenStreetMap de /mapa. */}
+            <div className="p-4 pt-3">
+              <MapView
+                heightClass="h-64"
+                zoom={15}
+                showPopupLink={false}
+                courts={[
+                  {
+                    id: court.id,
+                    name: court.name,
+                    sport: court.sport,
+                    price_per_hour: court.price_per_hour,
+                    lat: Number(venue.lat),
+                    lng: Number(venue.lng),
+                    venue_name: venue.name ?? null,
+                  },
+                ]}
+              />
+            </div>
           </div>
         )}
       </div>
