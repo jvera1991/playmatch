@@ -1,0 +1,19 @@
+# Evita copiar al build de Docker cosas que no hacen falta o que no deben
+# terminar en una imagen: dependencias locales, builds viejos, el historial
+# de git y archivos de entorno de desarrollo.
+#
+# OJO: ".env" NO se excluye a propósito — EasyPanel lo genera en el build
+# ("Create env file") y Next.js lo necesita para incrustar las variables
+# NEXT_PUBLIC_* en el bundle. Excluirlo dejaría el sitio sin Supabase.
+node_modules
+.next
+.git
+.github
+.env.local
+.env.development*
+*.log
+*.patch
+*.zip
+playmatch-fix-files
+README.md
+PLAYMATCH_REVISION_ARQUITECTURA_*.md

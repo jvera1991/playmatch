@@ -30,32 +30,29 @@ export async function signUp(formData: FormData) {
   const supabase = await createClient();
   const email = String(formData.get("email"));
   const password = String(formData.get("password"));
-  const full_name = String(formData.get("full_name"));
+  const full_name = String(formData.get("full_name") || "").trim().slice(0, 120);
   const wants_owner = formData.get("role") === "owner";
 
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.signUp({
+  if (password.length < 8) {
+    redirect(`/registro?error=${encodeURIComponent("La contraseña debe tener al menos 8 caracteres.")}`);
+  }
+
+  // La preferencia de ser dueño viaja en los metadatos del registro y la
+  // aplica el trigger handle_new_user al crear el perfil (migración
+  // 20261006000001). Antes se intentaba con un update después del signUp,
+  // pero en ese momento no hay sesión (falta confirmar el correo) y no tenía
+  // efecto. El dueño igual queda pendiente de aprobación del admin.
+  const { error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      data: { full_name },
+      data: { full_name, wants_owner },
       emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
     },
   });
 
   if (error) {
     redirect(`/registro?error=${encodeURIComponent(error.message)}`);
-  }
-
-  // El trigger `handle_new_user` ya creó el profile con role='player' por defecto.
-  // Si pidió ser dueño, lo marcamos como 'owner' pendiente de aprobación del admin.
-  if (wants_owner && user) {
-    await supabase
-      .from("profiles")
-      .update({ role: "owner", is_approved_owner: false })
-      .eq("id", user.id);
   }
 
   redirect("/registro/revisa-tu-correo");

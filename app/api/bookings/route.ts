@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 
-const COMMISSION_RATE = 10; // % — Playmatch. Configurable a futuro desde /admin.
+// % — Playmatch. OJO: el precio y la comisión definitivos los recalcula la
+// base de datos (trigger protect_booking_integrity, migración
+// 20261006000001) — si cambias este valor, cámbialo también allá.
+const COMMISSION_RATE = 10;
 const HOLD_MINUTES = 15; // minutos que se aparta un cupo mientras el jugador paga
 
 // POST /api/bookings
@@ -43,6 +46,12 @@ async function handlePost(req: NextRequest) {
 
   if (!court_id || !start_at || !end_at) {
     return NextResponse.json({ error: "Faltan datos de la reserva." }, { status: 400 });
+  }
+
+  const startMs = Date.parse(start_at);
+  const endMs = Date.parse(end_at);
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) {
+    return NextResponse.json({ error: "Horario de reserva inválido." }, { status: 400 });
   }
 
   const { data: court, error: courtError } = await supabase
@@ -110,10 +119,17 @@ async function handlePost(req: NextRequest) {
 
   if (error) {
     const isOverlap = error.message.includes("no_overlapping_bookings");
-    return NextResponse.json(
-      { error: isOverlap ? "Ese horario ya fue reservado. Elige otro." : error.message },
-      { status: isOverlap ? 409 : 500 }
-    );
+    if (isOverlap) {
+      return NextResponse.json({ error: "Ese horario ya fue reservado. Elige otro." }, { status: 409 });
+    }
+    // P0001 = validación del trigger protect_booking_integrity (cancha no
+    // disponible, fuera de horario, horario pasado...). La base de datos es
+    // la autoridad sobre precio y reglas; aquí solo se traduce a un 400.
+    if (error.code === "P0001") {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    console.error("[POST /api/bookings] error de base de datos:", error);
+    return NextResponse.json({ error: "No se pudo crear la reserva. Intenta de nuevo." }, { status: 500 });
   }
 
   // El checkout de Wompi se construye en /reservas/[id]/pagar (ver lib/wompi.ts)

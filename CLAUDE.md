@@ -604,6 +604,56 @@ usuario quedaba logueado sin haber puesto contraseña. Se reprodujo localmente
 navegador/perfil donde se pidió. Edge con "cambio automático de perfil" puede
 abrirlo en otro perfil; en ese caso ahora se muestra un mensaje claro.
 
+## Auditoría OWASP Top 10 (cyber-neo) + cambio de mapa (06/10/2026)
+
+**Aplicado directo en Supabase** (migración `20261006000001_booking_integrity_and_auth_fixes.sql`,
+probada con ataques simulados antes y después):
+- **CRÍTICO (A01)** — un jugador podía, llamando la API de Supabase directo,
+  crear reservas `confirmed` a $0 o auto-confirmar/cambiar precio de las suyas;
+  un dueño podía inflar `owner_payout_amount`. Ahora el trigger
+  `protect_booking_integrity` es la autoridad: en INSERT fuerza
+  `pending_payment`, recalcula precio/comisión desde la cancha y valida cancha
+  activa+aprobada, horario futuro, duración múltiplo del slot, dentro del
+  horario semanal (hora Bogotá) y sin cierres. En UPDATE de jugador/dueño solo
+  permite cancelar. Service role (webhook, cron, liberación de cupos) y admin
+  no se restringen. **Si cambias COMMISSION_RATE en app/api/bookings, cámbialo
+  también en el trigger.**
+- Admin no podía aprobar/rechazar dueños (faltaba policy UPDATE para admin en
+  `profiles`) → policy `profiles_admin_update`.
+- Registrarse como dueño no tenía efecto → `handle_new_user` lee
+  `raw_user_meta_data.wants_owner` (signUp lo envía; sigue requiriendo aprobación).
+- Funciones de trigger seguían ejecutables vía RPC (EXECUTE a PUBLIC) → revocado.
+
+**En código:**
+- **CRÍTICO** webhook Wompi: con `WOMPI_EVENTS_SECRET` vacío cualquiera podía
+  falsificar un pago aprobado. Ahora sin secreto responde 503; además valida
+  monto+moneda contra la reserva y solo confirma desde `pending_payment`.
+- Cron: exige `CRON_SECRET` real (≥16 caracteres).
+- **ALTO (A03, XSS almacenado)** en el mapa: el globo insertaba el nombre de
+  la cancha como HTML. Ahora se arma con `textContent` (verificado con payload
+  `<img onerror>`: no se ejecuta).
+- /api/bookings valida fechas y devuelve 400 con el mensaje del trigger (P0001).
+- Registro y nueva contraseña: mínimo 8 caracteres.
+- `.dockerignore` creado (NO excluye `.env`: EasyPanel lo necesita en el build).
+- Eliminado `.github/workflows/deploy.yml` (deploy SSH/docker-compose que no se
+  usa; el despliegue real es EasyPanel).
+
+**Mapa:** Google Maps (navegador) reemplazado por **Leaflet 1.9.4 + teselas de
+OpenStreetMap**: sin llave, sin facturación. Atribución obligatoria visible.
+Si el tráfico crece, cambiar de proveedor con `NEXT_PUBLIC_MAP_TILE_URL` /
+`NEXT_PUBLIC_MAP_ATTRIBUTION` (el CSP se ajusta solo en next.config.ts).
+Geocodificación (`lib/geocoding.ts`): Google solo si existe
+`GOOGLE_MAPS_SERVER_API_KEY`, si no Nominatim (gratis; User-Agent propio,
+≤1 req/s, solo al guardar una cancha; fallback a barrio/comuna).
+`NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` ya no se usa.
+
+**Pendiente / aceptado:** `script-src 'unsafe-inline'` (requiere nonces);
+dependencias de build con alertas (Tailwind 3 / eslint-config-next, no llegan
+a runtime); activar "Leaked password protection" en Supabase Auth (manual);
+el repo de GitHub es PÚBLICO (considerar hacerlo privado); la llave de Google
+Maps del navegador quedó en el historial público de git → borrarla en Google
+Cloud ya que no se usa.
+
 ## Reglas para quien continúe este proyecto
 
 - No reescribir el esquema de base de datos sin revisar `supabase/migrations/` primero

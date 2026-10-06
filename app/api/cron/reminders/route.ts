@@ -6,8 +6,15 @@ import { createAdminClient } from "@/lib/supabase/server";
 // cron del sistema en el VPS) para mandar el recordatorio de WhatsApp 1h antes.
 // Protegido con un secreto simple para que no lo llame cualquiera.
 export async function GET(req: NextRequest) {
+  // Sin CRON_SECRET, el valor esperado sería "Bearer undefined" y cualquiera
+  // que lo adivine podría disparar el job. Se exige un secreto real.
+  const cronSecret = process.env.CRON_SECRET?.trim();
+  if (!cronSecret || cronSecret.length < 16) {
+    return NextResponse.json({ error: "Cron no configurado" }, { status: 503 });
+  }
+
   const auth = req.headers.get("authorization") ?? "";
-  const expected = `Bearer ${process.env.CRON_SECRET}`;
+  const expected = `Bearer ${cronSecret}`;
   const authBuf = Buffer.from(auth);
   const expectedBuf = Buffer.from(expected);
   const valid =

@@ -37,7 +37,7 @@ export default async function RegistroPage({
               type="password"
               name="password"
               required
-              minLength={6}
+              minLength={8}
               autoComplete="new-password"
               className="input mt-1"
             />

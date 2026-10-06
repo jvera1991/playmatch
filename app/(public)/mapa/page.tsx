@@ -44,7 +44,7 @@ export default async function MapaPage({
       };
     })
     // Solo podemos mostrar en el mapa las canchas que ya tienen coordenadas
-    // (se calculan solas al publicar, con la dirección + Google Geocoding).
+    // (se calculan solas al publicar la cancha, a partir de su dirección).
     .filter((c) => c.lat != null && c.lng != null);
 
   const courts: MapCourt[] = conCoordenadas
@@ -81,7 +81,7 @@ export default async function MapaPage({
         />
 
         <div className="mt-6">
-          <MapView courts={courts} apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? null} />
+          <MapView courts={courts} />
         </div>
 
         {sinCoordenadas > 0 && (

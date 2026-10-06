@@ -1,5 +1,17 @@
 import type { NextConfig } from "next";
 
+// Origen de las teselas del mapa (components/map-view.tsx). Si se cambia de
+// proveedor con NEXT_PUBLIC_MAP_TILE_URL, el CSP se ajusta solo.
+const MAP_TILE_ORIGIN = (() => {
+  const url = process.env.NEXT_PUBLIC_MAP_TILE_URL || "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+  try {
+    const { protocol, hostname } = new URL(url.replace(/\{[a-z]\}/g, "a"));
+    return `${protocol}//${hostname.replace(/^a\./, "*.")}`;
+  } catch {
+    return "https://tile.openstreetmap.org";
+  }
+})();
+
 const securityHeaders = [
   // Evita que el sitio se cargue dentro de un <iframe> ajeno (clickjacking).
   { key: "X-Frame-Options", value: "DENY" },
@@ -23,11 +35,13 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' https://maps.googleapis.com https://checkout.wompi.co",
+      // Google Maps se retiró del navegador (06/10/2026): el mapa ahora es
+      // Leaflet + teselas de OpenStreetMap, que solo necesitan img-src.
+      "script-src 'self' 'unsafe-inline' https://checkout.wompi.co",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
-      "img-src 'self' data: blob: https://*.supabase.co https://maps.gstatic.com https://maps.googleapis.com https://images.unsplash.com",
-      "connect-src 'self' https://*.supabase.co https://maps.googleapis.com",
+      `img-src 'self' data: blob: https://*.supabase.co https://images.unsplash.com ${MAP_TILE_ORIGIN}`,
+      "connect-src 'self' https://*.supabase.co",
       "frame-src 'self' https://checkout.wompi.co",
       "frame-ancestors 'none'",
       "base-uri 'self'",
