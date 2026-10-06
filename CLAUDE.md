@@ -691,6 +691,37 @@ limita crear/borrar al dueño. Ojo: `reason` es de lectura pública (policy
 `closures_public_read`), no poner datos personales en la nota. El bloqueo
 desde Mis canchas → Horarios sigue igual.
 
+## Panel admin: KPIs + CRM de jugadores y dueños (06/10/2026)
+
+Solo se AGREGÓ (el admin pidió "no modifiques, agrega"). Las 4 tarjetas del
+Resumen y las páginas anteriores quedan igual; solo se sumaron dos entradas al
+menú de cada página admin (`lib/admin-links.ts` es la lista para las nuevas).
+- **Resumen** (`components/admin/admin-kpi-section.tsx`): 12 KPIs de toda la
+  plataforma (comisión, GMV, reservas, ocupación de la red, jugadores
+  activos/nuevos, recurrencia, pagos no concretados, ticket, por liquidar,
+  dueños activos, canchas sin reservas), comisión por semana, "Para actuar
+  hoy", mapa de calor de la red, ranking de dueños y reparto por deporte/zona.
+  Periodo `?periodo=7|30|90|mes`. Dinero = solo `source='online'` (las manuales
+  no pagan comisión); ocupación y mapa de calor incluyen manuales.
+- **Jugadores** (`/admin/jugadores`, ficha `/admin/jugadores/[id]`): segmentos
+  frecuente/nuevo/en riesgo/inactivo/ocasional + "sin reservar" (registrado, nunca
+  jugó). Exportar CSV (`/admin/jugadores/exportar`, solo admin, verifica rol en
+  servidor y neutraliza fórmulas de Excel).
+- **Dueños y sedes** (`/admin/duenos-y-sedes`, ficha `[id]`): "salud" por dueño
+  (activo / en riesgo / dormido / nuevo) con pistas de causa (sin fotos, sin
+  horario, cierra antes de la hora pico, precio alto, cancela mucho).
+- **BD** (migración `20261006000004_admin_notes.sql`, aplicada): tabla
+  `admin_notes` (notas y etiquetas internas por perfil), RLS solo admin.
+- **Código**: `lib/admin-data.ts` (carga paginada de 1000 en 1000, porque
+  PostgREST corta ahí), `lib/admin-metrics.ts` (funciones puras; reutiliza
+  `owner-metrics`), `app/(admin)/admin/crm-actions.ts`.
+- **Limitaciones**: el buscador es por nombre/WhatsApp (el correo vive en
+  auth.users, no accesible sin service role). "Por liquidar" es una estimación
+  (jugado menos payouts pagados; ver pendiente 5). `summarizeCustomers` es
+  O(reservas x clientes): si pasa de ~20 mil reservas, optimizar.
+  `loadOwnerData` (panel del dueño) usa `.limit(5000)` pero PostgREST corta en
+  1000: si un dueño supera 1000 reservas/año, paginar como en `admin-data.ts`.
+
 ## Reglas para quien continúe este proyecto
 
 - No reescribir el esquema de base de datos sin revisar `supabase/migrations/` primero

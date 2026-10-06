@@ -65,7 +65,7 @@ export function KpiCard({
   );
 }
 
-export function PeriodTabs({ current }: { current: string }) {
+export function PeriodTabs({ current, basePath = "/panel" }: { current: string; basePath?: string }) {
   const opts = [
     { k: "7", label: "7 días" },
     { k: "30", label: "30 días" },
@@ -77,7 +77,7 @@ export function PeriodTabs({ current }: { current: string }) {
       {opts.map((o) => (
         <Link
           key={o.k}
-          href={`/panel?periodo=${o.k}`}
+          href={`${basePath}?periodo=${o.k}`}
           scroll={false}
           aria-selected={current === o.k}
           role="tab"

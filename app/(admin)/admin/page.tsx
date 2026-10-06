@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { DashboardShell, StatCard } from "@/components/dashboard-shell";
 import { requireAdmin } from "@/lib/guards";
+import { AdminKpiSection } from "@/components/admin/admin-kpi-section";
 
 const LINKS = [
   { href: "/admin", label: "Resumen", icon: "📊" },
@@ -8,9 +9,16 @@ const LINKS = [
   { href: "/admin/canchas", label: "Canchas", icon: "🏟️" },
   { href: "/admin/reservas", label: "Reservas", icon: "📅" },
   { href: "/admin/pagos", label: "Pagos a dueños", icon: "💸" },
+  { href: "/admin/jugadores", label: "Jugadores", icon: "👥" },
+  { href: "/admin/duenos-y-sedes", label: "Dueños y sedes", icon: "🏢" },
 ];
 
-export default async function AdminOverviewPage() {
+export default async function AdminOverviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ periodo?: string }>;
+}) {
+  const { periodo } = await searchParams;
   const { supabase, profile } = await requireAdmin("/admin");
 
   if (profile?.role !== "admin") {
@@ -64,6 +72,8 @@ export default async function AdminOverviewPage() {
           <span className="text-brand-700">Revisar →</span>
         </Link>
       )}
+
+      <AdminKpiSection supabase={supabase} periodo={periodo} />
     </DashboardShell>
   );
 }

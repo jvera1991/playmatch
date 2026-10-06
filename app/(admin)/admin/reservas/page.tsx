@@ -7,6 +7,8 @@ const LINKS = [
   { href: "/admin/canchas", label: "Canchas", icon: "🏟️" },
   { href: "/admin/reservas", label: "Reservas", icon: "📅" },
   { href: "/admin/pagos", label: "Pagos a dueños", icon: "💸" },
+  { href: "/admin/jugadores", label: "Jugadores", icon: "👥" },
+  { href: "/admin/duenos-y-sedes", label: "Dueños y sedes", icon: "🏢" },
 ];
 
 const STATUS_STYLE: Record<string, string> = {
