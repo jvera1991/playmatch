@@ -1,7 +1,13 @@
 import Link from "next/link";
 import { requestPasswordReset } from "../actions";
 
-export default function RecuperarPage() {
+export default async function RecuperarPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const { error } = await searchParams;
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-brand-glow px-4">
       <div className="card w-full max-w-sm animate-fade-up p-8">
@@ -12,9 +18,13 @@ export default function RecuperarPage() {
           <h1 className="mt-3 text-xl font-bold text-ink-900">Recuperar contraseña</h1>
           <p className="mt-2 text-sm text-ink-500">
             Escribe el correo con el que te registraste y te mandamos un enlace para
-            crear una contraseña nueva.
+            crear una contraseña nueva. Ábrelo en este mismo navegador.
           </p>
         </div>
+
+        {error && (
+          <p className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>
+        )}
 
         <form action={requestPasswordReset} className="space-y-4">
           <div>

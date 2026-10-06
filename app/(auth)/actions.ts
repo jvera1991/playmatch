@@ -3,13 +3,16 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
+import { RECOVERY_COOKIE, safeNextPath } from "@/lib/public-url";
 
 export async function signIn(formData: FormData) {
   const supabase = await createClient();
   const email = String(formData.get("email"));
   const password = String(formData.get("password"));
-  const next = String(formData.get("next") || "/");
+  // safeNextPath: evita que ?next=//otro-sitio.com mande al usuario fuera de
+  // Playmatch después de iniciar sesión (open redirect).
+  const next = safeNextPath(String(formData.get("next") || "/"));
 
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
@@ -17,6 +20,9 @@ export async function signIn(formData: FormData) {
     redirect(`/login?error=${encodeURIComponent(error.message)}&next=${encodeURIComponent(next)}`);
   }
 
+  // Un inicio de sesión normal con contraseña reemplaza cualquier sesión de
+  // recuperación pendiente en este navegador.
+  (await cookies()).delete(RECOVERY_COOKIE);
   redirect(next);
 }
 
@@ -58,7 +64,17 @@ export async function signUp(formData: FormData) {
 export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();
+  (await cookies()).delete(RECOVERY_COOKIE);
   redirect("/");
+}
+
+// Botón "Cancelar" del formulario de nueva contraseña: descarta la sesión de
+// recuperación sin cambiar nada.
+export async function cancelPasswordRecovery() {
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+  (await cookies()).delete(RECOVERY_COOKIE);
+  redirect("/login");
 }
 
 // Límite defensivo para el formulario de "olvidé mi contraseña": sin esto,
@@ -105,17 +121,25 @@ export async function requestPasswordReset(formData: FormData) {
 
 export async function updatePassword(formData: FormData) {
   const password = String(formData.get("password") || "");
+  const confirm = String(formData.get("confirm") || "");
   const supabase = await createClient();
 
-  // Esta acción solo funciona si el usuario llegó aquí con una sesión activa
-  // creada por el link de recuperación (ver app/auth/callback/route.ts) — sin
-  // eso, updateUser() falla porque no hay sesión que actualizar.
+  // Solo funciona con la sesión creada por el link de recuperación (ver
+  // app/auth/recuperar-callback/route.ts).
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
+    (await cookies()).delete(RECOVERY_COOKIE);
     redirect("/login?error=" + encodeURIComponent("El enlace expiró o ya se usó. Solicita uno nuevo."));
+  }
+
+  if (password.length < 8) {
+    redirect(`/actualizar-contrasena?error=${encodeURIComponent("La contraseña debe tener al menos 8 caracteres.")}`);
+  }
+  if (password !== confirm) {
+    redirect(`/actualizar-contrasena?error=${encodeURIComponent("Las contraseñas no coinciden.")}`);
   }
 
   const { error } = await supabase.auth.updateUser({ password });
@@ -124,5 +148,10 @@ export async function updatePassword(formData: FormData) {
     redirect(`/actualizar-contrasena?error=${encodeURIComponent(error.message)}`);
   }
 
+  // Contraseña cambiada: se cierra la sesión de recuperación y se pide entrar
+  // con la contraseña nueva. Así la sesión obtenida por el link del correo
+  // nunca se convierte en una sesión normal de navegación.
+  await supabase.auth.signOut();
+  (await cookies()).delete(RECOVERY_COOKIE);
   redirect("/login?reset=ok");
 }

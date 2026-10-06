@@ -572,6 +572,38 @@ memoria de un solo proceso (ya documentado) y la falta de una caché
 compartida — ninguno de los dos urgente con el tráfico actual, pero ambos
 quedan identificados para cuando el tráfico crezca de verdad.
 
+## Bug de redirecciones detrás del proxy + endurecimiento de recuperación (06/10/2026)
+
+**Causa raíz del "link de recuperación no funciona":** los Route Handlers
+(`app/auth/callback`, `app/auth/recuperar-callback`) redirigían con
+`new URL(request.url).origin`. En producción Next.js corre en un contenedor
+Docker detrás del proxy de EasyPanel, y ahí `request.url` trae el nombre
+INTERNO del contenedor (ej. `https://134e426ea6db:3000`), no el dominio
+público. Resultado: el link validaba el código y dejaba la sesión iniciada,
+pero redirigía a una dirección inexistente; al volver al dominio a mano el
+usuario quedaba logueado sin haber puesto contraseña. Se reprodujo localmente
+(standalone con `HOSTNAME=134e426ea6db`) antes de corregir.
+
+**Regla:** NUNCA usar `request.url`/`origin` para armar redirecciones. Usar
+`getPublicOrigin(request)` de `lib/public-url.ts` (prefiere
+`NEXT_PUBLIC_APP_URL`). Las redirecciones del middleware con
+`request.nextUrl.clone()` salen relativas y sí funcionan.
+
+**También corregido en la misma auditoría:**
+- Open redirect: `/auth/callback?next=@evil.com` y el `next` de `signIn`
+  permitían mandar al usuario a otro dominio. Ahora pasan por `safeNextPath()`.
+- Sesión de recuperación: al validar el link se pone la cookie httpOnly
+  `pm_password_recovery`; mientras exista, el middleware solo permite
+  `/actualizar-contrasena` (además de `/auth/*` y `/api/*`). Al guardar la
+  contraseña nueva se hace `signOut()` y se pide entrar con la contraseña
+  nueva; hay botón "Cancelar" (`cancelPasswordRecovery`). Así una sesión
+  obtenida por el link del correo nunca sirve para navegar la cuenta.
+- Formulario: confirmación de contraseña y mínimo 8 caracteres (servidor).
+
+**Nota de uso:** el link de recuperación usa PKCE — debe abrirse en el MISMO
+navegador/perfil donde se pidió. Edge con "cambio automático de perfil" puede
+abrirlo en otro perfil; en ese caso ahora se muestra un mensaje claro.
+
 ## Reglas para quien continúe este proyecto
 
 - No reescribir el esquema de base de datos sin revisar `supabase/migrations/` primero

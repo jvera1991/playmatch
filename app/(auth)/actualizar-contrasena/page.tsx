@@ -1,16 +1,28 @@
-import { updatePassword } from "../actions";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { updatePassword, cancelPasswordRecovery } from "../actions";
 
-// Para cuando esta página se muestra, app/auth/recuperar-callback/route.ts ya
-// intercambió el código del correo por una sesión real (ver ese archivo). Si
-// alguien llega aquí sin sesión (por ejemplo, entrando directo a la URL sin
-// pasar por el link del correo), updatePassword() en actions.ts lo detecta y
-// redirige a /login con un mensaje claro.
+// Se llega aquí desde app/auth/recuperar-callback/route.ts, que ya validó el
+// link del correo y creó una sesión de recuperación. Mientras esa sesión no
+// defina una contraseña nueva, el middleware no deja ir a ninguna otra página.
 export default async function ActualizarContrasenaPage({
   searchParams,
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
   const { error } = await searchParams;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect(
+      "/recuperar?error=" +
+        encodeURIComponent("Tu enlace expiró o ya se usó. Pide uno nuevo.")
+    );
+  }
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-brand-glow px-4">
@@ -20,6 +32,7 @@ export default async function ActualizarContrasenaPage({
             P
           </span>
           <h1 className="mt-3 text-xl font-bold text-ink-900">Crear nueva contraseña</h1>
+          <p className="mt-2 text-sm text-ink-500">Para la cuenta {user.email}</p>
         </div>
 
         {error && (
@@ -33,12 +46,29 @@ export default async function ActualizarContrasenaPage({
               type="password"
               name="password"
               required
-              minLength={6}
+              minLength={8}
+              autoComplete="new-password"
+              className="input mt-1"
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-ink-700">Repite la contraseña</label>
+            <input
+              type="password"
+              name="confirm"
+              required
+              minLength={8}
               autoComplete="new-password"
               className="input mt-1"
             />
           </div>
           <button className="btn-primary w-full">Guardar contraseña</button>
+        </form>
+
+        <form action={cancelPasswordRecovery} className="mt-3">
+          <button className="w-full text-center text-sm font-medium text-ink-500 hover:underline">
+            Cancelar
+          </button>
         </form>
       </div>
     </main>
